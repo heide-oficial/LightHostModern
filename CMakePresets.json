@@ -1,0 +1,39 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 22,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "windows-vs2022",
+      "displayName": "Windows VS2022 x64",
+      "generator": "Visual Studio 17 2022",
+      "binaryDir": "${sourceDir}/out/build/windows-vs2022",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "cacheVariables": {
+        "CMAKE_SYSTEM_VERSION": "10.0.22621.0",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/windows-vs2022",
+        "LIGHTHOST_VST2_PROVIDER": "XAYMAR"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "windows-vs2022-release",
+      "displayName": "Windows VS2022 x64 Release",
+      "configurePreset": "windows-vs2022",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-vs2022-debug",
+      "displayName": "Windows VS2022 x64 Debug",
+      "configurePreset": "windows-vs2022",
+      "configuration": "Debug"
+    }
+  ]
+}

@@ -1,6 +1,10 @@
 #ifndef PluginWindow_h
 #define PluginWindow_h
 
+#include <juce_audio_utils/juce_audio_utils.h>
+
+using namespace juce;
+
 ApplicationProperties& getAppProperties();
 
 class PluginWindow  : public DocumentWindow
@@ -15,12 +19,12 @@ public:
         NumTypes
     };
 
-    PluginWindow (Component* pluginEditor, AudioProcessorGraph::Node*, WindowFormatType);
+    PluginWindow (Component* pluginEditor, AudioProcessor&, NamedValueSet&, WindowFormatType);
     ~PluginWindow();
 
-    static PluginWindow* getWindowFor (AudioProcessorGraph::Node*, WindowFormatType);
+    static PluginWindow* getWindowFor (AudioProcessor&, NamedValueSet&, WindowFormatType);
 
-    static void closeCurrentlyOpenWindowsFor (const uint32 nodeId);
+    static void closeCurrentlyOpenWindowsFor (AudioProcessor&);
     static void closeAllCurrentlyOpenWindows();
     static bool containsActiveWindows();
 
@@ -28,7 +32,8 @@ public:
     void closeButtonPressed() override;
 
 private:
-    AudioProcessorGraph::Node* owner;
+    AudioProcessor* owner;
+    NamedValueSet* windowProperties;
     WindowFormatType type;
 
     float getDesktopScaleFactor() const override     { return 1.0f; }

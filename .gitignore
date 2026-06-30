@@ -1,3 +1,79 @@
+# Build outputs
+out/
+build/
 Builds/
-JuceLibraryCode/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+
+# Local dependency checkouts/caches
 lib/
+_deps/
+ThirdParty/VST2_SDK/
+ThirdParty/vst2/
+third_party/VST2_SDK/
+third_party/vst2/
+
+# Legacy Projucer generated files
+JuceLibraryCode/
+*.jucer
+
+# Visual Studio / MSBuild
+.vs/
+*.user
+*.suo
+*.VC.db
+*.VC.opendb
+*.opensdf
+*.sdf
+*.ipch
+*.tlog/
+*.lastbuildstate
+*.unsuccessfulbuild
+
+# Native build artifacts
+*.obj
+*.lib
+*.exp
+*.pdb
+*.ilk
+*.res
+*.idb
+*.iobj
+*.ipdb
+*.exe
+*.dll
+*.appx
+*.appxsym
+*.msix
+*.msixupload
+
+# WinUI generated output
+WinUI/.vs/
+WinUI/x64/
+WinUI/Win32/
+WinUI/ARM64/
+WinUI/**/x64/
+WinUI/**/Win32/
+WinUI/**/ARM64/
+WinUI/**/Generated Files/
+WinUI/**/AppPackages/
+WinUI/**/obj/
+WinUI/**/bin/
+WinUI/packaged-aumid.txt
+WinUI/**/*_h.h
+
+# Local runtime state / logs
+*.log
+*.dmp
+*.tmp
+*.bak
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/

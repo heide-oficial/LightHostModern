@@ -1,0 +1,461 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="LightHostWinUI.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Light Host Modern">
+
+    <Grid x:Name="RootLayout" Background="Transparent">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition x:Name="SidebarColumn" Width="230" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <Border x:Name="SidebarRail" Background="{ThemeResource AppSidebarBrush}" BorderBrush="{ThemeResource AppCardStrokeBrush}" BorderThickness="0,0,1,0">
+            <Grid x:Name="SidebarContent" Padding="18,24,14,24">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <Grid x:Name="BrandHeaderGrid" ColumnSpacing="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Image x:Name="BrandLogoImage" Source="Assets/logo.png" Width="22" Height="22" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    <TextBlock x:Name="BrandTitleText" Grid.Column="1" Text="Light Host Modern" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                </Grid>
+
+                <StackPanel Grid.Row="1" Margin="0,46,0,0" Spacing="8">
+                    <Button x:Name="DashboardButton" Content="Dashboard" MinHeight="48" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
+                    <Button x:Name="PreferencesButton" Content="Audio" MinHeight="48" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
+                    <Button x:Name="PluginsButton" Content="Plugins" MinHeight="48" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
+                    <Button x:Name="ConfigButton" Content="Settings" MinHeight="48" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
+                </StackPanel>
+
+                <Grid Grid.Row="2">
+                    <StackPanel x:Name="SidebarStatusPanel" Visibility="Collapsed">
+                    <TextBlock x:Name="ConnectionStatusText" Text="Connecting" FontSize="13" FontWeight="SemiBold" />
+                    <TextBlock x:Name="SidebarStatusDetailText" Text="Waiting for snapshot" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource AppTextSecondaryBrush}" Margin="0,4,0,0" />
+                    </StackPanel>
+                    <Button x:Name="SidebarToggleButton"
+                            AutomationProperties.Name="Collapse sidebar"
+                            Width="36"
+                            MinWidth="36"
+                            MinHeight="36"
+                            Padding="0"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Bottom">
+                        <Button.Content>
+                            <FontIcon x:Name="SidebarToggleIcon" Glyph="&#xE72B;" FontSize="14" />
+                        </Button.Content>
+                    </Button>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <Grid x:Name="MainContent" Grid.Column="1" Padding="42,54,52,42">
+            <ScrollViewer x:Name="ContentScrollViewer" Padding="0,0,28,0" VerticalScrollBarVisibility="Hidden">
+                <StackPanel x:Name="PageContentStack" Spacing="28" Margin="0,0,4,0">
+                    <Grid x:Name="HeaderGrid">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel>
+                            <TextBlock x:Name="PageTitleText" Text="Dashboard" FontSize="34" FontWeight="SemiBold" />
+                            <TextBlock x:Name="PageSubtitleText" Text="" Margin="0,6,0,0" FontSize="15" TextWrapping="Wrap" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                        </StackPanel>
+
+                        <StackPanel x:Name="HeaderActions" Grid.Column="1" Orientation="Horizontal" Spacing="12" Visibility="Collapsed">
+                            <TextBlock x:Name="HeaderStatusText" Text="Online" VerticalAlignment="Center" />
+                            <Button x:Name="RefreshButton" Content="Refresh" />
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid>
+                    <StackPanel x:Name="DashboardPanel" Spacing="14">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <Border Background="{ThemeResource AppCardBrush}" BorderBrush="{ThemeResource AppCardStrokeBrush}" BorderThickness="1" CornerRadius="8" Padding="24" Margin="0,0,7,0">
+                                <StackPanel>
+                                    <TextBlock Text="Audio backend" FontSize="14" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                    <TextBlock x:Name="DashboardDeviceTypeText" Text="--" FontSize="30" FontWeight="SemiBold" Margin="0,16,0,0" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Grid.Column="1" Background="{ThemeResource AppCardBrush}" BorderBrush="{ThemeResource AppCardStrokeBrush}" BorderThickness="1" CornerRadius="8" Padding="24" Margin="7,0,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="Format" FontSize="14" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                    <TextBlock x:Name="DashboardFormatText" Text="--" FontSize="26" FontWeight="SemiBold" Margin="0,18,0,0" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <Border Background="{ThemeResource AppCardBrush}" BorderBrush="{ThemeResource AppCardStrokeBrush}" BorderThickness="1" CornerRadius="8" Padding="24">
+                            <StackPanel Spacing="22">
+                                <TextBlock x:Name="DashboardRoutingTitleText" Text="Input and Output" FontSize="17" FontWeight="SemiBold" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="380" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel>
+                                        <TextBlock x:Name="DashboardInputDeviceLabel" Text="Input device" FontSize="13" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                        <TextBlock x:Name="DashboardInputDeviceText" Text="--" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,4,0,0" />
+                                    </StackPanel>
+                                    <StackPanel x:Name="InputMeterBarHost" Grid.Column="1" VerticalAlignment="Center" Margin="24,0,0,0" />
+                                </Grid>
+                                <Grid x:Name="DashboardOutputDeviceGrid">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="380" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel>
+                                        <TextBlock x:Name="DashboardOutputDeviceLabel" Text="Output device" FontSize="13" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                        <TextBlock x:Name="DashboardOutputDeviceText" Text="--" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,4,0,0" />
+                                    </StackPanel>
+                                    <StackPanel x:Name="OutputMeterBarHost" Grid.Column="1" VerticalAlignment="Center" Margin="24,0,0,0" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border Background="{ThemeResource AppCardBrush}" BorderBrush="{ThemeResource AppCardStrokeBrush}" BorderThickness="1" CornerRadius="8" Padding="24" Margin="0,0,7,0">
+                                <StackPanel>
+                                    <TextBlock Text="Active plugins" FontSize="14" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                    <TextBlock x:Name="ActivePluginsText" Text="--" FontSize="34" FontWeight="SemiBold" Margin="0,12,0,0" />
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Column="1" Background="{ThemeResource AppCardBrush}" BorderBrush="{ThemeResource AppCardStrokeBrush}" BorderThickness="1" CornerRadius="8" Padding="24" Margin="7,0,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="Installed plugins" FontSize="14" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                    <TextBlock x:Name="KnownPluginsText" Text="--" FontSize="34" FontWeight="SemiBold" Margin="0,12,0,0" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </StackPanel>
+
+                    <StackPanel x:Name="PreferencesPanel" Visibility="Collapsed" Spacing="18">
+                        <Border x:Name="DeviceRoutingCard" Background="{ThemeResource AppCardBrush}" BorderBrush="{ThemeResource AppCardStrokeBrush}" BorderThickness="1" CornerRadius="8" Padding="24">
+                            <StackPanel Spacing="14">
+                                <TextBlock Text="Devices" FontSize="17" FontWeight="SemiBold" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="220" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Audio backend" VerticalAlignment="Center" />
+                                    <StackPanel x:Name="AudioBackendBoxHost" Grid.Column="1" />
+                                </Grid>
+                                <Grid x:Name="InputDeviceRow">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="220" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="InputDeviceLabel" Text="Input device" VerticalAlignment="Center" />
+                                    <StackPanel x:Name="InputBoxHost" Grid.Column="1" />
+                                </Grid>
+                                <Grid x:Name="OutputDeviceRow">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="220" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="OutputDeviceLabel" Text="Output device" VerticalAlignment="Center" />
+                                    <StackPanel x:Name="OutputBoxHost" Grid.Column="1" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <Border x:Name="ChannelsCard" Background="{ThemeResource AppCardBrush}" BorderBrush="{ThemeResource AppCardStrokeBrush}" BorderThickness="1" CornerRadius="8" Padding="24">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="28" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel x:Name="InputChannelGroup">
+                                    <TextBlock Text="Input channels" FontWeight="SemiBold" Margin="0,0,0,10" />
+                                    <StackPanel x:Name="InputChannelsPanel" />
+                                </StackPanel>
+                                <StackPanel x:Name="OutputChannelGroup" Grid.Column="2">
+                                    <TextBlock Text="Output channels" FontWeight="SemiBold" Margin="0,0,0,10" />
+                                    <StackPanel x:Name="OutputChannelsPanel" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <Border x:Name="FormatCard" Background="{ThemeResource AppCardBrush}" BorderBrush="{ThemeResource AppCardStrokeBrush}" BorderThickness="1" CornerRadius="8" Padding="24">
+                            <StackPanel Spacing="14">
+                                <TextBlock Text="Format" FontSize="17" FontWeight="SemiBold" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="220" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="SampleRateLabel" Text="Sample rate" VerticalAlignment="Center" />
+                                    <StackPanel x:Name="SampleRateBoxHost" Grid.Column="1" />
+                                </Grid>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="220" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="BufferSizeLabel" Text="Buffer size" VerticalAlignment="Center" />
+                                    <StackPanel x:Name="BufferSizeBoxHost" Grid.Column="1" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                    </StackPanel>
+
+                    <StackPanel x:Name="PluginsPanel" Visibility="Collapsed" Spacing="20">
+                        <Grid>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button x:Name="RunningPluginsTabButton" Content="Running" MinWidth="126" MinHeight="44" />
+                                <Button x:Name="InstalledPluginsTabButton" Content="Installed" MinWidth="126" MinHeight="44" />
+                            </StackPanel>
+
+                            <Button x:Name="PluginActionsButton"
+                                    AutomationProperties.Name="Plugin database actions"
+                                    Width="44"
+                                    MinWidth="44"
+                                    Padding="0"
+                                    HorizontalAlignment="Right"
+                                Visibility="Collapsed">
+                                <Button.Content>
+                                    <FontIcon Glyph="&#xE700;" FontSize="18" />
+                                </Button.Content>
+                                <Button.Flyout>
+                                    <MenuFlyout>
+                                        <MenuFlyoutItem x:Name="ScanDefaultPluginsMenuItem" Text="Scan" Icon="Find" Click="ScanDefaultPlugins_Click" />
+                                        <MenuFlyoutItem x:Name="ScanPathsMenuItem" Text="Scan paths" Icon="Folder" Click="ScanPaths_Click" />
+                                        <MenuFlyoutItem x:Name="RemoveMissingPluginsMenuItem" Text="Remove missing" Icon="Delete" Click="RemoveMissingPlugins_Click" />
+                                        <MenuFlyoutItem x:Name="ClearPluginDatabaseMenuItem" Text="Clear" Icon="Clear" Click="ClearPluginDatabase_Click" />
+                                    </MenuFlyout>
+                                </Button.Flyout>
+                            </Button>
+                        </Grid>
+
+                        <StackPanel x:Name="RunningPluginsPanel" Spacing="10">
+                            <TextBlock x:Name="RunningPluginsEmptyText" Text="No plugins running" Visibility="Collapsed" FontSize="16" Foreground="{ThemeResource AppTextSecondaryBrush}" Margin="0,42,0,0" HorizontalAlignment="Center" />
+                            <StackPanel x:Name="RunningPluginsListCard" Spacing="8">
+                                <Grid Padding="22,0,22,0" ColumnSpacing="18" MinHeight="28">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="64" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="170" />
+                                        <ColumnDefinition Width="100" />
+                                        <ColumnDefinition Width="150" />
+                                        <ColumnDefinition Width="186" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Order" Foreground="{ThemeResource AppTextSecondaryBrush}" HorizontalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Text="Name" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                    <TextBlock Grid.Column="2" Text="Manufacturer" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                    <TextBlock Grid.Column="3" Text="Type" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                    <TextBlock Grid.Column="4" Text="Status" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                    <TextBlock Grid.Column="5" Text="Actions" Foreground="{ThemeResource AppTextSecondaryBrush}" HorizontalAlignment="Right" />
+                                </Grid>
+                                <StackPanel x:Name="RunningPluginsListView" Spacing="8" />
+                            </StackPanel>
+                            <TextBlock x:Name="RunningPluginsSummaryText" Text="" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                        </StackPanel>
+
+                        <StackPanel x:Name="InstalledPluginsPanel" Visibility="Collapsed" Spacing="16">
+                            <TextBlock x:Name="InstalledPluginsEmptyText" Text="No plugins installed" Visibility="Collapsed" FontSize="16" Foreground="{ThemeResource AppTextSecondaryBrush}" Margin="0,42,0,0" HorizontalAlignment="Center" />
+                            <StackPanel x:Name="InstalledPluginsListCard" Spacing="8">
+                                <Grid Padding="22,0,22,0" ColumnSpacing="18" MinHeight="28">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="180" />
+                                        <ColumnDefinition Width="100" />
+                                        <ColumnDefinition Width="150" />
+                                        <ColumnDefinition Width="150" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Name" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                    <TextBlock Grid.Column="1" Text="Manufacturer" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                    <TextBlock Grid.Column="2" Text="Type" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                    <TextBlock Grid.Column="3" Text="Status" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                    <TextBlock Grid.Column="4" Text="Actions" Foreground="{ThemeResource AppTextSecondaryBrush}" HorizontalAlignment="Right" />
+                                </Grid>
+                                <StackPanel x:Name="InstalledPluginsListView" Spacing="8" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="10" Visibility="Collapsed">
+                                <Button x:Name="ScanDefaultPluginsButton" Content="Scan" />
+                                <Button x:Name="RemoveMissingPluginsButton" Content="Remove Missing" />
+                                <Button x:Name="ClearPluginDatabaseButton" Content="Clear" />
+                            </StackPanel>
+                            <TextBlock x:Name="InstalledPluginsSummaryText" Text="" Foreground="{ThemeResource AppTextSecondaryBrush}" Visibility="Collapsed" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <StackPanel x:Name="ConfigPanel" Visibility="Collapsed" Spacing="18">
+                        <Border Background="{ThemeResource AppCardBrush}" BorderBrush="{ThemeResource AppCardStrokeBrush}" BorderThickness="1" CornerRadius="8" Padding="24">
+                            <StackPanel Spacing="14">
+                                <TextBlock Text="General" FontSize="17" FontWeight="SemiBold" />
+                                <StackPanel x:Name="StartWithWindowsCheckBoxHost" />
+                                <StackPanel x:Name="CloseToTraySwitchHost" />
+                                <Grid ColumnSpacing="24">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="360" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel x:Name="EnableVst2CheckBoxHost" />
+                                    <TextBlock x:Name="Vst2StatusText"
+                                               Grid.Column="1"
+                                               Text="VST2 status unavailable."
+                                               FontSize="14"
+                                               Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                               TextWrapping="Wrap"
+                                               VerticalAlignment="Center" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Background="{ThemeResource AppCardBrush}" BorderBrush="{ThemeResource AppCardStrokeBrush}" BorderThickness="1" CornerRadius="8" Padding="24">
+                            <StackPanel Spacing="18">
+                                <TextBlock Text="Appearance" FontSize="17" FontWeight="SemiBold" />
+                                <Grid ColumnSpacing="24">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="360" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel>
+                                        <TextBlock Text="Window material" />
+                                        <TextBlock Text="Choose the native Windows 11 backdrop used behind the app content." Foreground="{ThemeResource AppTextSecondaryBrush}" Margin="0,4,0,0" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <StackPanel x:Name="BackdropModeBoxHost" Grid.Column="1" />
+                                </Grid>
+                                <Grid ColumnSpacing="24">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="360" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel>
+                                        <TextBlock Text="App icon" />
+                                        <TextBlock Text="Choose the icon variant used in the app and tray." Foreground="{ThemeResource AppTextSecondaryBrush}" Margin="0,4,0,0" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <StackPanel x:Name="IconModeBoxHost" Grid.Column="1" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Background="{ThemeResource AppCardBrush}" BorderBrush="{ThemeResource AppCardStrokeBrush}" BorderThickness="1" CornerRadius="8" Padding="24">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="Windows sound settings" FontSize="17" FontWeight="SemiBold" />
+                                    <TextBlock Text="Open the system sound control page for device-level changes." Foreground="{ThemeResource AppTextSecondaryBrush}" Margin="0,4,0,0" TextWrapping="Wrap" />
+                                </StackPanel>
+                                <Button x:Name="OpenWindowsSoundSettingsButton" Grid.Column="1" Content="Open Windows Sound Settings" VerticalAlignment="Center" />
+                            </Grid>
+                        </Border>
+
+                        <Grid ColumnSpacing="14">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <Border Background="{ThemeResource AppCardBrush}" BorderBrush="{ThemeResource AppCardStrokeBrush}" BorderThickness="1" CornerRadius="8" Padding="24">
+                                <StackPanel Spacing="10">
+                                    <Grid ColumnSpacing="10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                            <TextBlock Text="Light Host Modern" FontSize="17" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                            <TextBlock Text="v1.0.0" Foreground="{ThemeResource AppTextSecondaryBrush}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <Button x:Name="RepositoryButton" Grid.Column="1" AutomationProperties.Name="Go to Light Host Modern repository" Width="36" MinWidth="36" MinHeight="36" Padding="0" Click="RepositoryButton_Click">
+                                            <Button.Content>
+                                                <FontIcon Glyph="&#xE8A7;" FontSize="15" />
+                                            </Button.Content>
+                                        </Button>
+                                    </Grid>
+                                    <TextBlock Text="A Windows-focused fork of Light Host, updated and modernized by Matheus Heidemann." Foreground="{ThemeResource AppTextSecondaryBrush}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Grid.Column="1" Background="{ThemeResource AppCardBrush}" BorderBrush="{ThemeResource AppCardStrokeBrush}" BorderThickness="1" CornerRadius="8" Padding="24">
+                                <StackPanel Spacing="10">
+                                    <Grid ColumnSpacing="10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Light Host (Original)" FontSize="17" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                        <Button x:Name="OriginalRepositoryButton" Grid.Column="1" AutomationProperties.Name="Go to original Light Host repository" Width="36" MinWidth="36" MinHeight="36" Padding="0" Click="OriginalRepositoryButton_Click">
+                                            <Button.Content>
+                                                <FontIcon Glyph="&#xE8A7;" FontSize="15" />
+                                            </Button.Content>
+                                        </Button>
+                                    </Grid>
+                                    <TextBlock Text="Original project by Rolando Islas/OpenCMA." Foreground="{ThemeResource AppTextSecondaryBrush}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </StackPanel>
+
+                    <StackPanel Visibility="Collapsed">
+                        <TextBlock x:Name="DashboardDeviceText" />
+                        <TextBlock x:Name="DashboardRoutingText" />
+                        <TextBlock x:Name="DashboardChannelsText" />
+                        <TextBlock x:Name="DashboardLatencyText" />
+                        <TextBlock x:Name="PluginSummaryText" />
+                        <TextBlock x:Name="CpuText" />
+                        <TextBlock x:Name="HealthText" />
+                        <TextBlock x:Name="MeterStatusText" />
+                        <StackPanel x:Name="DebugSettingsPanel">
+                            <TextBlock x:Name="DebugStatusText" />
+                            <Button x:Name="CopyLogsButton" />
+                            <Button x:Name="SaveLogButton" />
+                        </StackPanel>
+                        <StackPanel x:Name="InputDevicePanel" />
+                        <StackPanel x:Name="OutputDevicePanel" />
+                        <StackPanel x:Name="SampleRatePanel" />
+                        <StackPanel x:Name="BufferSizePanel" />
+                        <StackPanel x:Name="ThemeModeBoxHost" />
+                        <Button x:Name="DeletePluginStatesButton" />
+                    </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+
+        <Border x:Name="NotificationToast"
+                Grid.ColumnSpan="2"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Bottom"
+                Margin="0,0,28,28"
+                MinWidth="280"
+                MaxWidth="420"
+                Padding="16,14"
+                CornerRadius="8"
+                BorderThickness="1"
+                BorderBrush="{ThemeResource AppFlyoutStrokeBrush}"
+                Background="{ThemeResource AppFlyoutBrush}"
+                Visibility="Collapsed">
+            <TextBlock x:Name="NotificationText"
+                       Text=""
+                       TextWrapping="Wrap"
+                       FontSize="14"
+                       FontWeight="SemiBold" />
+        </Border>
+    </Grid>
+</Window>

@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Application
+    x:Class="LightHostWinUI.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <StaticResource x:Key="AppSidebarBrush" ResourceKey="LayerFillColorDefaultBrush" />
+                    <StaticResource x:Key="AppCardBrush" ResourceKey="CardBackgroundFillColorDefaultBrush" />
+                    <StaticResource x:Key="AppSolidBackgroundBrush" ResourceKey="SolidBackgroundFillColorBaseBrush" />
+                    <StaticResource x:Key="AppCardStrokeBrush" ResourceKey="CardStrokeColorDefaultBrush" />
+                    <StaticResource x:Key="AppControlBrush" ResourceKey="ControlFillColorDefaultBrush" />
+                    <StaticResource x:Key="AppControlStrokeBrush" ResourceKey="ControlStrokeColorDefaultBrush" />
+                    <StaticResource x:Key="AppFlyoutBrush" ResourceKey="AcrylicBackgroundFillColorDefaultBrush" />
+                    <StaticResource x:Key="AppFlyoutStrokeBrush" ResourceKey="SurfaceStrokeColorFlyoutBrush" />
+                    <StaticResource x:Key="AppTextSecondaryBrush" ResourceKey="TextFillColorSecondaryBrush" />
+                    <StaticResource x:Key="AppAccentBrush" ResourceKey="AccentFillColorDefaultBrush" />
+                    <StaticResource x:Key="AppMeterInactiveBrush" ResourceKey="ControlFillColorDefaultBrush" />
+                    <StaticResource x:Key="AppMeterSafeBrush" ResourceKey="SystemFillColorSuccessBrush" />
+                    <StaticResource x:Key="AppMeterWarningBrush" ResourceKey="SystemFillColorCautionBrush" />
+                    <StaticResource x:Key="AppMeterCriticalBrush" ResourceKey="SystemFillColorCriticalBrush" />
+                    <StaticResource x:Key="AppStatusSuccessBackgroundBrush" ResourceKey="SystemFillColorSuccessBackgroundBrush" />
+                    <StaticResource x:Key="AppStatusSuccessStrokeBrush" ResourceKey="SystemFillColorSuccessBrush" />
+                    <StaticResource x:Key="AppStatusCriticalBackgroundBrush" ResourceKey="SystemFillColorCriticalBackgroundBrush" />
+                    <StaticResource x:Key="AppStatusCriticalStrokeBrush" ResourceKey="SystemFillColorCriticalBrush" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <StaticResource x:Key="AppSidebarBrush" ResourceKey="LayerFillColorDefaultBrush" />
+                    <StaticResource x:Key="AppCardBrush" ResourceKey="CardBackgroundFillColorDefaultBrush" />
+                    <StaticResource x:Key="AppSolidBackgroundBrush" ResourceKey="SolidBackgroundFillColorBaseBrush" />
+                    <StaticResource x:Key="AppCardStrokeBrush" ResourceKey="CardStrokeColorDefaultBrush" />
+                    <StaticResource x:Key="AppControlBrush" ResourceKey="ControlFillColorDefaultBrush" />
+                    <StaticResource x:Key="AppControlStrokeBrush" ResourceKey="ControlStrokeColorDefaultBrush" />
+                    <StaticResource x:Key="AppFlyoutBrush" ResourceKey="AcrylicBackgroundFillColorDefaultBrush" />
+                    <StaticResource x:Key="AppFlyoutStrokeBrush" ResourceKey="SurfaceStrokeColorFlyoutBrush" />
+                    <StaticResource x:Key="AppTextSecondaryBrush" ResourceKey="TextFillColorSecondaryBrush" />
+                    <StaticResource x:Key="AppAccentBrush" ResourceKey="AccentFillColorDefaultBrush" />
+                    <StaticResource x:Key="AppMeterInactiveBrush" ResourceKey="ControlFillColorDefaultBrush" />
+                    <StaticResource x:Key="AppMeterSafeBrush" ResourceKey="SystemFillColorSuccessBrush" />
+                    <StaticResource x:Key="AppMeterWarningBrush" ResourceKey="SystemFillColorCautionBrush" />
+                    <StaticResource x:Key="AppMeterCriticalBrush" ResourceKey="SystemFillColorCriticalBrush" />
+                    <StaticResource x:Key="AppStatusSuccessBackgroundBrush" ResourceKey="SystemFillColorSuccessBackgroundBrush" />
+                    <StaticResource x:Key="AppStatusSuccessStrokeBrush" ResourceKey="SystemFillColorSuccessBrush" />
+                    <StaticResource x:Key="AppStatusCriticalBackgroundBrush" ResourceKey="SystemFillColorCriticalBackgroundBrush" />
+                    <StaticResource x:Key="AppStatusCriticalStrokeBrush" ResourceKey="SystemFillColorCriticalBrush" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="HighContrast">
+                    <StaticResource x:Key="AppSidebarBrush" ResourceKey="SystemColorWindowColorBrush" />
+                    <StaticResource x:Key="AppCardBrush" ResourceKey="SystemColorWindowColorBrush" />
+                    <StaticResource x:Key="AppSolidBackgroundBrush" ResourceKey="SystemColorWindowColorBrush" />
+                    <StaticResource x:Key="AppCardStrokeBrush" ResourceKey="SystemColorWindowTextColorBrush" />
+                    <StaticResource x:Key="AppControlBrush" ResourceKey="SystemColorButtonFaceColorBrush" />
+                    <StaticResource x:Key="AppControlStrokeBrush" ResourceKey="SystemColorButtonTextColorBrush" />
+                    <StaticResource x:Key="AppFlyoutBrush" ResourceKey="SystemColorWindowColorBrush" />
+                    <StaticResource x:Key="AppFlyoutStrokeBrush" ResourceKey="SystemColorWindowTextColorBrush" />
+                    <StaticResource x:Key="AppTextSecondaryBrush" ResourceKey="SystemColorGrayTextColorBrush" />
+                    <StaticResource x:Key="AppAccentBrush" ResourceKey="SystemColorHotlightColorBrush" />
+                    <StaticResource x:Key="AppMeterInactiveBrush" ResourceKey="SystemColorGrayTextColorBrush" />
+                    <StaticResource x:Key="AppMeterSafeBrush" ResourceKey="SystemColorHighlightColorBrush" />
+                    <StaticResource x:Key="AppMeterWarningBrush" ResourceKey="SystemColorHighlightColorBrush" />
+                    <StaticResource x:Key="AppMeterCriticalBrush" ResourceKey="SystemColorHighlightColorBrush" />
+                    <StaticResource x:Key="AppStatusSuccessBackgroundBrush" ResourceKey="SystemColorButtonFaceColorBrush" />
+                    <StaticResource x:Key="AppStatusSuccessStrokeBrush" ResourceKey="SystemColorButtonTextColorBrush" />
+                    <StaticResource x:Key="AppStatusCriticalBackgroundBrush" ResourceKey="SystemColorButtonFaceColorBrush" />
+                    <StaticResource x:Key="AppStatusCriticalStrokeBrush" ResourceKey="SystemColorButtonTextColorBrush" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

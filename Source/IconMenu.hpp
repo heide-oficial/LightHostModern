@@ -1,60 +1,39 @@
-//
-//  IconMenu.hpp
-//  Light Host
-//
-//  Created by Rolando Islas on 12/26/15.
-//
-//
-
 #ifndef IconMenu_hpp
 #define IconMenu_hpp
 
-ApplicationProperties& getAppProperties();
+#include "AudioEngine.h"
+#include "HostIpcServer.h"
 
-class IconMenu : public SystemTrayIconComponent, private Timer, public ChangeListener
+class IconMenu : public SystemTrayIconComponent, private MultiTimer
 {
 public:
-    IconMenu();
-    ~IconMenu();
-    void mouseDown(const MouseEvent&);
+    IconMenu(bool startInSafeMode = false, bool debugEnabled = false, bool restoreActivePluginsOnStartup = false);
+    ~IconMenu() override;
+
+    void mouseDown(const MouseEvent&) override;
     static void menuInvocationCallback(int id, IconMenu*);
-    void changeListenerCallback(ChangeBroadcaster* changed);
-	static String getKey(String type, PluginDescription plugin);
 
-	const int INDEX_EDIT, INDEX_BYPASS, INDEX_DELETE, INDEX_MOVE_UP, INDEX_MOVE_DOWN;
+	const int INDEX_OPEN_WINUI, INDEX_QUIT;
+
 private:
-	#if JUCE_MAC
-    std::string exec(const char* cmd);
-	#endif
-    void timerCallback();
-    void reloadPlugins();
-    void showAudioSettings();
-    void loadActivePlugins();
-    void savePluginStates();
-    void deletePluginStates();
-	PluginDescription getNextPluginOlderThanTime(int &time);
-	void removePluginsLackingInputOutput();
-	std::vector<PluginDescription> getTimeSortedList();
-	void setIcon();
-    
-    AudioDeviceManager deviceManager;
-    AudioPluginFormatManager formatManager;
-    KnownPluginList knownPluginList;
-    KnownPluginList activePluginList;
-    KnownPluginList::SortMethod pluginSortMethod;
-    PopupMenu menu;
-    ScopedPointer<PluginDirectoryScanner> scanner;
-    bool menuIconLeftClicked;
-    AudioProcessorGraph graph;
-    AudioProcessorPlayer player;
-    AudioProcessorGraph::Node *inputNode;
-    AudioProcessorGraph::Node *outputNode;
-	#if JUCE_WINDOWS
-	int x, y;
-	#endif
+	enum TimerIds
+	{
+		menuTimerId = 1
+	};
 
-	class PluginListWindow;
-	ScopedPointer<PluginListWindow> pluginListWindow;
+	void timerCallback(int timerId) override;
+	void showNativeContextMenu();
+	void openWinUI();
+	bool openPackagedWinUI(const String& parameters);
+	String resolvePackagedWinUIAumid();
+	void setIcon();
+
+    std::unique_ptr<AudioEngine> engine;
+	std::unique_ptr<HostIpcServer> ipcServer;
+    PopupMenu menu;
+	bool debugMode = false;
+	int x = 0, y = 0;
+
 };
 
 #endif /* IconMenu_hpp */

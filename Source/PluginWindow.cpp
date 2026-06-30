@@ -1,25 +1,27 @@
-#include "../JuceLibraryCode/JuceHeader.h"
+#include <juce_audio_utils/juce_audio_utils.h>
 #include "PluginWindow.h"
 
 class PluginWindow;
 static Array <PluginWindow*> activePluginWindows;
 
 PluginWindow::PluginWindow (Component* const pluginEditor,
-                            AudioProcessorGraph::Node* const o,
+                            AudioProcessor& o,
+                            NamedValueSet& properties,
                             WindowFormatType t)
     : DocumentWindow (pluginEditor->getName(), Colours::lightgrey,
                       DocumentWindow::minimiseButton | DocumentWindow::closeButton),
-      owner (o),
+      owner (&o),
+      windowProperties (&properties),
       type (t)
 {
     setSize (400, 300);
     setUsingNativeTitleBar(true);
     setContentOwned (pluginEditor, true);
 
-    setTopLeftPosition (owner->properties.getWithDefault (getLastXProp (type), Random::getSystemRandom().nextInt (500)),
-                        owner->properties.getWithDefault (getLastYProp (type), Random::getSystemRandom().nextInt (500)));
+    setTopLeftPosition (windowProperties->getWithDefault (getLastXProp (type), Random::getSystemRandom().nextInt (500)),
+                        windowProperties->getWithDefault (getLastYProp (type), Random::getSystemRandom().nextInt (500)));
 
-    owner->properties.set (getOpenProp (type), true);
+    windowProperties->set (getOpenProp (type), true);
 
     setVisible (true);
 
@@ -27,24 +29,17 @@ PluginWindow::PluginWindow (Component* const pluginEditor,
     
 }
 
-void PluginWindow::closeCurrentlyOpenWindowsFor (const uint32 nodeId)
+void PluginWindow::closeCurrentlyOpenWindowsFor (AudioProcessor& processor)
 {
     for (int i = activePluginWindows.size(); --i >= 0;)
-        if (activePluginWindows.getUnchecked(i)->owner->nodeId == nodeId)
+        if (activePluginWindows.getUnchecked(i)->owner == &processor)
             delete activePluginWindows.getUnchecked (i);
 }
 
 void PluginWindow::closeAllCurrentlyOpenWindows()
 {
-    if (activePluginWindows.size() > 0)
-    {
-        for (int i = activePluginWindows.size(); --i >= 0;)
-            delete activePluginWindows.getUnchecked (i);
-
-        Component dummyModalComp;
-        dummyModalComp.enterModalState();
-        MessageManager::getInstance()->runDispatchLoopUntil (50);
-    }
+    for (int i = activePluginWindows.size(); --i >= 0;)
+        delete activePluginWindows.getUnchecked (i);
 }
 
 bool PluginWindow::containsActiveWindows()
@@ -71,8 +66,8 @@ public:
     }
 
     void refresh() { }
-    virtual void audioProcessorChanged (AudioProcessor*) { }
-    virtual void audioProcessorParameterChanged(AudioProcessor* processor, int, float) { }
+    void audioProcessorChanged (AudioProcessor*, const ChangeDetails&) override { }
+    void audioProcessorParameterChanged(AudioProcessor*, int, float) override { }
 
 private:
     AudioProcessor& owner;
@@ -131,22 +126,20 @@ private:
 };
 
 //==============================================================================
-PluginWindow* PluginWindow::getWindowFor (AudioProcessorGraph::Node* const node,
+PluginWindow* PluginWindow::getWindowFor (AudioProcessor& processor,
+                                          NamedValueSet& windowProperties,
                                           WindowFormatType type)
 {
-    jassert (node != nullptr);
-
     for (int i = activePluginWindows.size(); --i >= 0;)
-        if (activePluginWindows.getUnchecked(i)->owner == node
+        if (activePluginWindows.getUnchecked(i)->owner == &processor
              && activePluginWindows.getUnchecked(i)->type == type)
             return activePluginWindows.getUnchecked(i);
 
-    AudioProcessor* processor = node->getProcessor();
     AudioProcessorEditor* ui = nullptr;
 
     if (type == Normal)
     {
-        ui = processor->createEditorIfNeeded();
+        ui = processor.createEditorAndMakeActive();
 
         if (ui == nullptr)
             type = Generic;
@@ -157,15 +150,15 @@ PluginWindow* PluginWindow::getWindowFor (AudioProcessorGraph::Node* const node,
         if (type == Generic || type == Parameters)
             ui = new GenericAudioProcessorEditor (processor);
         else if (type == Programs)
-            ui = new ProgramAudioProcessorEditor (processor);
+            ui = new ProgramAudioProcessorEditor (&processor);
     }
 
     if (ui != nullptr)
     {
-        if (AudioPluginInstance* const plugin = dynamic_cast<AudioPluginInstance*> (processor))
+        if (AudioPluginInstance* const plugin = dynamic_cast<AudioPluginInstance*> (&processor))
             ui->setName (plugin->getName());
 
-        return new PluginWindow (ui, node, type);
+        return new PluginWindow (ui, processor, windowProperties, type);
     }
 
     return nullptr;
@@ -179,12 +172,17 @@ PluginWindow::~PluginWindow()
 
 void PluginWindow::moved()
 {
-    owner->properties.set (getLastXProp (type), getX());
-    owner->properties.set (getLastYProp (type), getY());
+    if (windowProperties != nullptr)
+    {
+        windowProperties->set (getLastXProp (type), getX());
+        windowProperties->set (getLastYProp (type), getY());
+    }
 }
 
 void PluginWindow::closeButtonPressed()
 {
-    owner->properties.set (getOpenProp (type), false);
+    if (windowProperties != nullptr)
+        windowProperties->set (getOpenProp (type), false);
+
     delete this;
 }
