@@ -3638,5 +3638,18 @@ namespace winrt::LightHostWinUI::implementation
     {
         if (closeQuitsHost)
             sendCommand("quit-host");
+
+        try
+        {
+            if (refreshTimer)
+                refreshTimer.Stop();
+
+            closeFluentDropdowns();
+            SystemBackdrop(nullptr);
+            Content(nullptr);
+        }
+        catch (...) {}
+
+        Microsoft::UI::Xaml::Application::Current().Exit();
     }
 }

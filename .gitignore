@@ -10,6 +10,7 @@ compile_commands.json
 
 # Local dependency checkouts/caches
 lib/
+tools/
 _deps/
 ThirdParty/VST2_SDK/
 ThirdParty/vst2/
