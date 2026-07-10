@@ -186,11 +186,31 @@
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
                                 <StackPanel x:Name="InputChannelGroup">
-                                    <TextBlock Text="Input channels" FontWeight="SemiBold" Margin="0,0,0,10" />
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Input channels" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                        <Button x:Name="InputChannelsToggleAllButton"
+                                                Grid.Column="1"
+                                                Content="Uncheck all"
+                                                MinHeight="32" />
+                                    </Grid>
                                     <StackPanel x:Name="InputChannelsPanel" />
                                 </StackPanel>
                                 <StackPanel x:Name="OutputChannelGroup" Grid.Column="2">
-                                    <TextBlock Text="Output channels" FontWeight="SemiBold" Margin="0,0,0,10" />
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Output channels" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                        <Button x:Name="OutputChannelsToggleAllButton"
+                                                Grid.Column="1"
+                                                Content="Uncheck all"
+                                                MinHeight="32" />
+                                    </Grid>
                                     <StackPanel x:Name="OutputChannelsPanel" />
                                 </StackPanel>
                             </Grid>
@@ -324,6 +344,124 @@
                         </Border>
 
                         <Border Background="{ThemeResource AppCardBrush}" BorderBrush="{ThemeResource AppCardStrokeBrush}" BorderThickness="1" CornerRadius="8" Padding="24">
+                            <StackPanel Spacing="20">
+                                <StackPanel Spacing="6">
+                                    <TextBlock Text="Device persistence" FontSize="17" FontWeight="SemiBold" />
+                                    <TextBlock Text="Keep Light Host Modern pinned to a preferred audio device instead of falling back automatically."
+                                               Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                               TextWrapping="Wrap" />
+                                </StackPanel>
+
+                                <StackPanel Spacing="16">
+                                    <Border Background="{ThemeResource AppCardBrush}" BorderBrush="{ThemeResource AppCardStrokeBrush}" BorderThickness="1" CornerRadius="8" Padding="16">
+                                        <Grid ColumnSpacing="16">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="360" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Spacing="4">
+                                                <TextBlock Text="Mode" FontWeight="SemiBold" />
+                                                <TextBlock Text="Choose how Light Host Modern handles unavailable audio devices."
+                                                           Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                                           TextWrapping="Wrap" />
+                                            </StackPanel>
+                                            <StackPanel x:Name="AudioPersistenceModeBoxHost" Grid.Column="1" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </Border>
+
+                                    <Border x:Name="AudioPersistenceRetryPolicyGrid" Background="{ThemeResource AppCardBrush}" BorderBrush="{ThemeResource AppCardStrokeBrush}" BorderThickness="1" CornerRadius="8" Padding="16">
+                                        <Grid ColumnSpacing="16">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="132" />
+                                                <ColumnDefinition Width="132" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Spacing="4">
+                                                <TextBlock Text="Retry policy" FontWeight="SemiBold" />
+                                                <TextBlock Text="Retry the preferred device, then pause when attempts are exhausted."
+                                                           Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                                           TextWrapping="Wrap" />
+                                            </StackPanel>
+                                            <StackPanel x:Name="AudioRecoveryRetrySecondsBoxHost" Grid.Column="1" />
+                                            <StackPanel x:Name="AudioRecoveryRetryAttemptsBoxHost" Grid.Column="2" />
+                                        </Grid>
+                                    </Border>
+
+                                    <Border x:Name="CustomAudioPersistenceCard" Background="{ThemeResource AppCardBrush}" BorderBrush="{ThemeResource AppCardStrokeBrush}" BorderThickness="1" CornerRadius="8" Padding="16">
+                                        <Grid x:Name="CustomAudioPersistenceGrid" ColumnSpacing="16">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="360" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Spacing="4" VerticalAlignment="Center">
+                                                <TextBlock Text="Preferred device" FontWeight="SemiBold" />
+                                                <TextBlock Text="Select the backend and device Light Host Modern should retry."
+                                                           Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                                           TextWrapping="Wrap" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Spacing="10">
+                                                <Grid ColumnSpacing="12">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="120" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="Audio backend" VerticalAlignment="Center" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                                    <StackPanel x:Name="CustomRecoveryBackendBoxHost" Grid.Column="1" />
+                                                </Grid>
+                                                <Grid ColumnSpacing="12">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="120" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock x:Name="CustomRecoveryInputLabel" Text="Input device" VerticalAlignment="Center" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                                    <StackPanel x:Name="CustomRecoveryInputBoxHost" Grid.Column="1" />
+                                                </Grid>
+                                                <Grid x:Name="CustomRecoveryOutputRow" ColumnSpacing="12">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="120" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="Output device" VerticalAlignment="Center" Foreground="{ThemeResource AppTextSecondaryBrush}" />
+                                                    <StackPanel x:Name="CustomRecoveryOutputBoxHost" Grid.Column="1" />
+                                                </Grid>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+
+                                    <TextBlock x:Name="AudioRecoveryStatusText"
+                                               Visibility="Collapsed"
+                                               Text="Audio recovery is running normally." />
+                                    <Button x:Name="RetryAudioDeviceButton"
+                                            Visibility="Collapsed"
+                                            Content="Retry now" />
+                                    <Button x:Name="ChooseAudioDeviceButton"
+                                            Visibility="Collapsed"
+                                            Content="Choose device" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Background="{ThemeResource AppCardBrush}" BorderBrush="{ThemeResource AppCardStrokeBrush}" BorderThickness="1" CornerRadius="8" Padding="24">
+                            <Grid ColumnSpacing="24">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Spacing="6">
+                                    <TextBlock Text="Enabled devices" FontSize="17" FontWeight="SemiBold" />
+                                    <TextBlock x:Name="EnabledAudioChoicesSummaryText"
+                                               Text="All detected audio backends and devices are enabled."
+                                               Foreground="{ThemeResource AppTextSecondaryBrush}"
+                                               TextWrapping="Wrap" />
+                                </StackPanel>
+                                <Button x:Name="ManageEnabledAudioDevicesButton"
+                                        Grid.Column="1"
+                                        Content="Manage enabled devices"
+                                        VerticalAlignment="Center" />
+                            </Grid>
+                        </Border>
+
+                        <Border Background="{ThemeResource AppCardBrush}" BorderBrush="{ThemeResource AppCardStrokeBrush}" BorderThickness="1" CornerRadius="8" Padding="24">
                             <StackPanel Spacing="18">
                                 <TextBlock Text="Appearance" FontSize="17" FontWeight="SemiBold" />
                                 <Grid ColumnSpacing="24">
@@ -380,7 +518,7 @@
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                             <TextBlock Text="Light Host Modern" FontSize="17" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                            <TextBlock Text="v1.0.0" Foreground="{ThemeResource AppTextSecondaryBrush}" VerticalAlignment="Center" />
+                                            <TextBlock Text="v1.1.0" Foreground="{ThemeResource AppTextSecondaryBrush}" VerticalAlignment="Center" />
                                         </StackPanel>
                                         <Button x:Name="RepositoryButton" Grid.Column="1" AutomationProperties.Name="Go to Light Host Modern repository" Width="36" MinWidth="36" MinHeight="36" Padding="0" Click="RepositoryButton_Click">
                                             <Button.Content>

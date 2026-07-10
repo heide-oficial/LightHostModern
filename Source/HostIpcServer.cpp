@@ -256,6 +256,8 @@ String HostIpcServer::processRequest(const String& request)
 		return buildSnapshot();
 	if (trimmed == "telemetry")
 		return buildTelemetry();
+	if (trimmed == "enabled-audio-choices")
+		return buildEnabledAudioChoices();
 
 	const int separator = trimmed.indexOfChar(':');
 	const auto command = (separator >= 0 ? trimmed.substring(0, separator) : trimmed).trim().toLowerCase();
@@ -493,6 +495,99 @@ String HostIpcServer::processRequest(const String& request)
 		return commandResult(engine.setAudioOutputChannelEnabled(channelIndex, enabled));
 	}
 
+	if (command == "set-all-input-channels")
+	{
+		return commandResult(engine.setAllAudioInputChannelsEnabled(index != 0));
+	}
+
+	if (command == "set-all-output-channels")
+	{
+		return commandResult(engine.setAllAudioOutputChannelsEnabled(index != 0));
+	}
+
+	if (command == "set-audio-persistence-mode")
+	{
+		return commandResult(engine.setAudioPersistenceMode(payload));
+	}
+
+	if (command == "set-audio-persistence-retry-seconds")
+	{
+		return commandResult(engine.setAudioPersistenceRetrySeconds(index));
+	}
+
+	if (command == "set-audio-persistence-retry-attempts")
+	{
+		return commandResult(engine.setAudioPersistenceRetryAttempts(index));
+	}
+
+	if (command == "set-audio-persistence-custom-backend")
+	{
+		return commandResult(engine.setAudioPersistenceCustomBackendByIndex(index));
+	}
+
+	if (command == "set-audio-persistence-custom-input")
+	{
+		return commandResult(engine.setAudioPersistenceCustomInputByIndex(index));
+	}
+
+	if (command == "set-audio-persistence-custom-output")
+	{
+		return commandResult(engine.setAudioPersistenceCustomOutputByIndex(index));
+	}
+
+	if (command == "retry-audio-device")
+	{
+		const bool success = engine.retryPreferredAudioDeviceNow();
+		if (!success)
+		{
+			const String message = engine.getLastAudioConfigurationError().isNotEmpty()
+				? engine.getLastAudioConfigurationError()
+				: "Preferred audio device could not be retried";
+			return "{\"status\":\"error\",\"message\":" + quote(message) + "}";
+		}
+
+		return commandOk();
+	}
+
+	if (command == "block-audio-backend")
+	{
+		return commandResult(engine.addBlockedAudioBackend(payload));
+	}
+
+	if (command == "block-audio-input")
+	{
+		return commandResult(engine.addBlockedAudioInputDevice(payload));
+	}
+
+	if (command == "block-audio-output")
+	{
+		return commandResult(engine.addBlockedAudioOutputDevice(payload));
+	}
+
+	if (command == "remove-blocked-audio-backend")
+	{
+		return commandResult(engine.removeBlockedAudioBackend(index));
+	}
+
+	if (command == "remove-blocked-audio-device")
+	{
+		return commandResult(engine.removeBlockedAudioDevice(index));
+	}
+
+	if (command == "set-enabled-audio-backend")
+	{
+		const int backendIndex = payload.upToFirstOccurrenceOf(":", false, false).getIntValue();
+		const bool enabled = payload.fromFirstOccurrenceOf(":", false, false).getIntValue() != 0;
+		return commandResult(engine.setAudioBackendEnabledByIndex(backendIndex, enabled));
+	}
+
+	if (command == "set-enabled-audio-device")
+	{
+		const int deviceIndex = payload.upToFirstOccurrenceOf(":", false, false).getIntValue();
+		const bool enabled = payload.fromFirstOccurrenceOf(":", false, false).getIntValue() != 0;
+		return commandResult(engine.setAudioDeviceChoiceEnabledByIndex(deviceIndex, enabled));
+	}
+
 	if (command == "scan-default-plugins")
 	{
 		const int beforeCount = (int) engine.getKnownPluginsSorted().size();
@@ -587,6 +682,13 @@ String HostIpcServer::buildTelemetry()
 			"\"outputLevel\":" + String(diagnostics.outputLevel, 3) + ","
 			"\"loadedPlugins\":" + String(diagnostics.loadedPlugins) + ","
 			"\"chainLatencySamples\":" + String(diagnostics.chainLatencySamples) + ","
+			"\"recoveryState\":" + quote(diagnostics.recoveryState) + ","
+			"\"recoveryMessage\":" + quote(diagnostics.recoveryMessage) + ","
+			"\"recoveryAttempt\":" + String(diagnostics.recoveryAttempt) + ","
+			"\"recoveryMaxAttempts\":" + String(diagnostics.recoveryMaxAttempts) + ","
+			"\"recoveryTargetBackend\":" + quote(diagnostics.recoveryTargetBackend) + ","
+			"\"recoveryTargetInputDevice\":" + quote(diagnostics.recoveryTargetInputDevice) + ","
+			"\"recoveryTargetOutputDevice\":" + quote(diagnostics.recoveryTargetOutputDevice) + ","
 			"\"processFailures\":" + String((int64) diagnostics.processFailures) + ","
 			"\"chainReloads\":" + String((int64) diagnostics.chainReloads) + ","
 			"\"settingsFlushes\":" + String((int64) diagnostics.settingsFlushes) +
@@ -600,6 +702,8 @@ String HostIpcServer::buildSnapshot()
 	const auto activePlugins = engine.getActivePluginsSorted();
 	const auto knownPluginList = engine.getKnownPluginsSorted();
 	const auto audioConfig = engine.getAudioDeviceConfiguration();
+	const auto recoveryConfig = engine.getAudioRecoveryConfiguration();
+	const auto blocklistConfig = engine.getAudioBlocklistConfiguration();
 	const auto knownPlugins = (int) knownPluginList.size();
 
 	StringArray plugins;
@@ -625,6 +729,18 @@ String HostIpcServer::buildSnapshot()
 			+ ",\"path\":" + quote(plugin.fileOrIdentifier) + "}");
 	}
 
+	std::vector<String> blockedBackends;
+	for (const auto& backend : blocklistConfig.blockedBackends)
+		blockedBackends.push_back(backend);
+
+	std::vector<String> blockedDeviceEntries;
+	std::vector<String> blockedDeviceLabels;
+	for (const auto& choice : blocklistConfig.blockedDevices)
+	{
+		blockedDeviceEntries.push_back(choice.backendName + "|" + choice.role + "|" + choice.deviceName);
+		blockedDeviceLabels.push_back(choice.backendName + " " + choice.role + ": " + choice.deviceName);
+	}
+
 	return "{"
 		"\"status\":\"online\","
 		"\"knownPlugins\":" + String(knownPlugins) + ","
@@ -647,17 +763,36 @@ String HostIpcServer::buildSnapshot()
 			"\"outputLevel\":" + String(diagnostics.outputLevel, 3) + ","
 			"\"loadedPlugins\":" + String(diagnostics.loadedPlugins) + ","
 			"\"chainLatencySamples\":" + String(diagnostics.chainLatencySamples) + ","
+			"\"recoveryState\":" + quote(diagnostics.recoveryState) + ","
+			"\"recoveryMessage\":" + quote(diagnostics.recoveryMessage) + ","
+			"\"recoveryAttempt\":" + String(diagnostics.recoveryAttempt) + ","
+			"\"recoveryMaxAttempts\":" + String(diagnostics.recoveryMaxAttempts) + ","
+			"\"recoveryTargetBackend\":" + quote(diagnostics.recoveryTargetBackend) + ","
+			"\"recoveryTargetInputDevice\":" + quote(diagnostics.recoveryTargetInputDevice) + ","
+			"\"recoveryTargetOutputDevice\":" + quote(diagnostics.recoveryTargetOutputDevice) + ","
 			"\"processFailures\":" + String((int64) diagnostics.processFailures) + ","
 			"\"chainReloads\":" + String((int64) diagnostics.chainReloads) + ","
 			"\"settingsFlushes\":" + String((int64) diagnostics.settingsFlushes) +
-		"}," 
+		"},"
 		"\"appConfig\":{"
 			"\"startWithWindows\":" + String(isStartWithWindowsEnabled() ? "true" : "false") + ","
 			"\"closeBehavior\":" + quote(getCloseBehavior()) + ","
 			"\"trayIconMode\":" + quote(getTrayIconMode()) + ","
 			"\"vst2HostAvailable\":" + String(isVst2HostAvailable() ? "true" : "false") + ","
 			"\"vst2RuntimeEnabled\":" + String(isVst2SettingEnabled() ? "true" : "false") + ","
-			"\"vst2HostEnabled\":" + String(engine.isVst2FormatActive() ? "true" : "false") +
+			"\"vst2HostEnabled\":" + String(engine.isVst2FormatActive() ? "true" : "false") + ","
+			"\"audioPersistenceMode\":" + quote(recoveryConfig.mode) + ","
+			"\"audioPersistenceRetrySeconds\":" + String(recoveryConfig.retrySeconds) + ","
+			"\"audioPersistenceRetryAttempts\":" + String(recoveryConfig.retryAttempts) + ","
+			"\"audioPersistenceCustomBackend\":" + quote(recoveryConfig.customBackend) + ","
+			"\"audioPersistenceCustomInputDevice\":" + quote(recoveryConfig.customInputDevice) + ","
+			"\"audioPersistenceCustomOutputDevice\":" + quote(recoveryConfig.customOutputDevice) + ","
+			"\"audioPersistenceLastBackend\":" + quote(recoveryConfig.lastBackend) + ","
+			"\"audioPersistenceLastInputDevice\":" + quote(recoveryConfig.lastInputDevice) + ","
+			"\"audioPersistenceLastOutputDevice\":" + quote(recoveryConfig.lastOutputDevice) + ","
+			"\"blockedAudioBackends\":" + stringArrayJson(blockedBackends) + ","
+			"\"blockedAudioDevices\":" + stringArrayJson(blockedDeviceEntries) + ","
+			"\"blockedAudioDeviceLabels\":" + stringArrayJson(blockedDeviceLabels) +
 		"},"
 		"\"audioConfig\":{"
 			"\"backendNames\":" + stringArrayJson(audioConfig.backendNames) + ","
@@ -679,6 +814,23 @@ String HostIpcServer::buildSnapshot()
 		"},"
 		"\"activePlugins\":[" + plugins.joinIntoString(",") + "],"
 		"\"knownPluginList\":[" + knownPluginItems.joinIntoString(",") + "]"
+	"}";
+}
+
+String HostIpcServer::buildEnabledAudioChoices()
+{
+	const auto choices = engine.getAvailableAudioChoicesConfiguration();
+
+	std::vector<String> deviceEntries;
+	for (const auto& choice : choices.deviceChoices)
+		deviceEntries.push_back(choice.backendName + "|" + choice.role + "|" + choice.deviceName);
+
+	return "{"
+		"\"status\":\"ok\","
+		"\"allAudioBackendNames\":" + stringArrayJson(choices.backendNames) + ","
+		"\"allAudioBackendEnabled\":" + boolArrayJson(choices.backendEnabled) + ","
+		"\"allAudioDeviceChoices\":" + stringArrayJson(deviceEntries) + ","
+		"\"allAudioDeviceChoiceEnabled\":" + boolArrayJson(choices.deviceEnabled) +
 	"}";
 }
 

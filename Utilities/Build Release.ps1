@@ -23,7 +23,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 $appName = "Light Host Modern"
-$appVersion = "1.0.0"
+$appVersion = "1.1.0"
 $exeName = "Light Host Modern.exe"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $outRoot = Join-Path $repoRoot "out\release"
@@ -565,7 +565,7 @@ if (Test-Path -LiteralPath `$installRoot) { Remove-Item -LiteralPath `$installRo
     $uninstallKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\LightHostModern"
     New-Item -Path $uninstallKey -Force | Out-Null
     Set-ItemProperty -Path $uninstallKey -Name DisplayName -Value $appName
-    Set-ItemProperty -Path $uninstallKey -Name DisplayVersion -Value "1.0.0"
+    Set-ItemProperty -Path $uninstallKey -Name DisplayVersion -Value "1.1.0"
     Set-ItemProperty -Path $uninstallKey -Name Publisher -Value "Light Host Modern"
     Set-ItemProperty -Path $uninstallKey -Name InstallLocation -Value $installRoot
     Set-ItemProperty -Path $uninstallKey -Name DisplayIcon -Value $exePath
@@ -974,7 +974,7 @@ The installed application includes the full LICENSE file. The license is also av
     $manufacturer = "Light Host Modern"
     $escapedIconPath = ConvertTo-WixXmlText $IconPath
     $upgradeCode = "8F28E61C-DC90-4927-B7B4-3E74E4B5960B"
-    $mainExeTarget = "[INSTALLFOLDER]$exeName"
+    $mainExeTarget = "[APPLICATIONFOLDER]$exeName"
 
     $wxs = New-Object System.Collections.Generic.List[string]
     $wxs.Add("<?xml version=`"1.0`" encoding=`"UTF-8`"?>")
@@ -989,7 +989,7 @@ The installed application includes the full LICENSE file. The license is also av
     $wxs.Add("    <WixVariable Id=`"WixUILicenseRtf`" Value=`"$licenseRtf`" />")
     $wxs.Add("    <ui:WixUI Id=`"WixUI_Advanced`" />")
     $wxs.Add("    <StandardDirectory Id=`"ProgramFiles64Folder`">")
-    $wxs.Add("      <Directory Id=`"INSTALLFOLDER`" Name=`"$productName`">")
+    $wxs.Add("      <Directory Id=`"APPLICATIONFOLDER`" Name=`"$productName`">")
     foreach ($line in $installDirectoryLines) {
         $wxs.Add($line)
     }
@@ -998,7 +998,7 @@ The installed application includes the full LICENSE file. The license is also av
     $wxs.Add("    <StandardDirectory Id=`"ProgramMenuFolder`">")
     $wxs.Add("      <Directory Id=`"ApplicationProgramsFolder`" Name=`"$productName`">")
     $wxs.Add("        <Component Id=`"StartMenuShortcutComponent`" Guid=`"*`">")
-    $wxs.Add("          <Shortcut Id=`"StartMenuShortcut`" Name=`"$productName`" Description=`"$productName`" Target=`"$mainExeTarget`" WorkingDirectory=`"INSTALLFOLDER`" Icon=`"AppIcon.ico`" />")
+    $wxs.Add("          <Shortcut Id=`"StartMenuShortcut`" Name=`"$productName`" Description=`"$productName`" Target=`"$mainExeTarget`" WorkingDirectory=`"APPLICATIONFOLDER`" Icon=`"AppIcon.ico`" />")
     $wxs.Add("          <RemoveFolder Id=`"RemoveApplicationProgramsFolder`" On=`"uninstall`" />")
     $wxs.Add("          <RegistryValue Root=`"HKCU`" Key=`"Software\LightHostModern`" Name=`"StartMenuShortcut`" Type=`"integer`" Value=`"1`" KeyPath=`"yes`" />")
     $wxs.Add("        </Component>")
@@ -1006,7 +1006,7 @@ The installed application includes the full LICENSE file. The license is also av
     $wxs.Add("    </StandardDirectory>")
     $wxs.Add("    <StandardDirectory Id=`"DesktopFolder`">")
     $wxs.Add("      <Component Id=`"DesktopShortcutComponent`" Guid=`"*`">")
-    $wxs.Add("        <Shortcut Id=`"DesktopShortcut`" Name=`"$productName`" Description=`"$productName`" Target=`"$mainExeTarget`" WorkingDirectory=`"INSTALLFOLDER`" Icon=`"AppIcon.ico`" />")
+    $wxs.Add("        <Shortcut Id=`"DesktopShortcut`" Name=`"$productName`" Description=`"$productName`" Target=`"$mainExeTarget`" WorkingDirectory=`"APPLICATIONFOLDER`" Icon=`"AppIcon.ico`" />")
     $wxs.Add("        <RegistryValue Root=`"HKCU`" Key=`"Software\LightHostModern`" Name=`"DesktopShortcut`" Type=`"integer`" Value=`"1`" KeyPath=`"yes`" />")
     $wxs.Add("      </Component>")
     $wxs.Add("    </StandardDirectory>")

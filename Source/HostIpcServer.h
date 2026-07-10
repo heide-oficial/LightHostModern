@@ -22,6 +22,7 @@ private:
 	String processRequest(const String& request);
 	String buildTelemetry();
 	String buildSnapshot();
+	String buildEnabledAudioChoices();
 	String commandOk();
 	String commandResult(bool success);
 

@@ -38,6 +38,8 @@ namespace winrt::LightHostWinUI::implementation
         void InputBox_SelectionChanged(winrt::Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
         void OutputBox_SelectionChanged(winrt::Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
         void ChannelCheckBox_Changed(winrt::Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void InputChannelsToggleAll_Click(winrt::Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OutputChannelsToggleAll_Click(winrt::Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void SampleRateBox_SelectionChanged(winrt::Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
         void BufferSizeBox_SelectionChanged(winrt::Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
         void RunningPluginsListView_SelectionChanged(winrt::Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
@@ -62,6 +64,15 @@ namespace winrt::LightHostWinUI::implementation
         void CloseToTraySwitch_Toggled(winrt::Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void CloseBehaviorRadioButton_Checked(winrt::Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void EnableVst2CheckBox_Changed(winrt::Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void AudioPersistenceModeBox_SelectionChanged(winrt::Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
+        void AudioRecoveryRetrySecondsBox_ValueChanged(Microsoft::UI::Xaml::Controls::NumberBox const&, Microsoft::UI::Xaml::Controls::NumberBoxValueChangedEventArgs const&);
+        void AudioRecoveryRetryAttemptsBox_ValueChanged(Microsoft::UI::Xaml::Controls::NumberBox const&, Microsoft::UI::Xaml::Controls::NumberBoxValueChangedEventArgs const&);
+        void CustomRecoveryBackendBox_SelectionChanged(winrt::Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
+        void CustomRecoveryInputBox_SelectionChanged(winrt::Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
+        void CustomRecoveryOutputBox_SelectionChanged(winrt::Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
+        void RetryAudioDevice_Click(winrt::Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void ChooseAudioDevice_Click(winrt::Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void ManageEnabledAudioDevices_Click(winrt::Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void IconModeBox_SelectionChanged(winrt::Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
         void Window_Closed(winrt::Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::WindowEventArgs const&);
 
@@ -92,6 +103,12 @@ namespace winrt::LightHostWinUI::implementation
         Microsoft::UI::Xaml::Controls::ComboBox themeModeBox{ nullptr };
         Microsoft::UI::Xaml::Controls::ComboBox backdropModeBox{ nullptr };
         Microsoft::UI::Xaml::Controls::ComboBox iconModeBox{ nullptr };
+        Microsoft::UI::Xaml::Controls::ComboBox audioPersistenceModeBox{ nullptr };
+        Microsoft::UI::Xaml::Controls::ComboBox customRecoveryBackendBox{ nullptr };
+        Microsoft::UI::Xaml::Controls::ComboBox customRecoveryInputBox{ nullptr };
+        Microsoft::UI::Xaml::Controls::ComboBox customRecoveryOutputBox{ nullptr };
+        Microsoft::UI::Xaml::Controls::NumberBox audioRecoveryRetrySecondsBox{ nullptr };
+        Microsoft::UI::Xaml::Controls::NumberBox audioRecoveryRetryAttemptsBox{ nullptr };
         Microsoft::UI::Xaml::Controls::ToggleSwitch startWithWindowsCheckBox{ nullptr };
         Microsoft::UI::Xaml::Controls::ToggleSwitch closeToTraySwitch{ nullptr };
         Microsoft::UI::Xaml::Controls::ToggleSwitch enableVst2CheckBox{ nullptr };
@@ -133,6 +150,15 @@ namespace winrt::LightHostWinUI::implementation
         std::vector<std::wstring> knownPluginDisplayNames;
         std::vector<std::string> renderedInputChannelKeys;
         std::vector<std::string> renderedOutputChannelKeys;
+        std::string currentAudioBackendName;
+        std::string currentAudioInputDeviceName;
+        std::string currentAudioOutputDeviceName;
+        int disabledAudioBackendCount = 0;
+        int disabledAudioDeviceCount = 0;
+        std::vector<std::string> allAudioBackendNames;
+        std::vector<bool> allAudioBackendEnabled;
+        std::vector<std::string> allAudioDeviceChoices;
+        std::vector<bool> allAudioDeviceChoiceEnabled;
         std::vector<std::string> pluginScanPaths;
         std::vector<Microsoft::UI::Xaml::Controls::Border> runningPluginItemBorders;
         std::vector<Microsoft::UI::Xaml::Controls::Border> installedPluginItemBorders;
@@ -147,6 +173,12 @@ namespace winrt::LightHostWinUI::implementation
         Microsoft::UI::Xaml::Controls::ComboBox ThemeModeBox() const { return themeModeBox; }
         Microsoft::UI::Xaml::Controls::ComboBox BackdropModeBox() const { return backdropModeBox; }
         Microsoft::UI::Xaml::Controls::ComboBox IconModeBox() const { return iconModeBox; }
+        Microsoft::UI::Xaml::Controls::ComboBox AudioPersistenceModeBox() const { return audioPersistenceModeBox; }
+        Microsoft::UI::Xaml::Controls::ComboBox CustomRecoveryBackendBox() const { return customRecoveryBackendBox; }
+        Microsoft::UI::Xaml::Controls::ComboBox CustomRecoveryInputBox() const { return customRecoveryInputBox; }
+        Microsoft::UI::Xaml::Controls::ComboBox CustomRecoveryOutputBox() const { return customRecoveryOutputBox; }
+        Microsoft::UI::Xaml::Controls::NumberBox AudioRecoveryRetrySecondsBox() const { return audioRecoveryRetrySecondsBox; }
+        Microsoft::UI::Xaml::Controls::NumberBox AudioRecoveryRetryAttemptsBox() const { return audioRecoveryRetryAttemptsBox; }
         Microsoft::UI::Xaml::Controls::ToggleSwitch StartWithWindowsCheckBox() const { return startWithWindowsCheckBox; }
         Microsoft::UI::Xaml::Controls::ToggleSwitch CloseToTraySwitch() const { return closeToTraySwitch; }
         Microsoft::UI::Xaml::Controls::ToggleSwitch EnableVst2CheckBox() const { return enableVst2CheckBox; }
@@ -195,6 +227,10 @@ namespace winrt::LightHostWinUI::implementation
             std::vector<ChannelRowData> const& rows,
             std::string const& commandPrefix,
             std::vector<std::string>& renderedKeys);
+        void syncChannelToggleButton(Microsoft::UI::Xaml::Controls::Button const& button,
+            std::vector<ChannelRowData> const& rows,
+            std::string const& commandPrefix);
+        void syncEnabledAudioChoicesSummary();
         void resetRunningPluginDragVisuals();
         void showPluginSubsection(std::wstring const& section);
         void updateDebugControls();

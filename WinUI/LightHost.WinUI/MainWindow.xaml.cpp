@@ -6,8 +6,10 @@
 #include "WinUIDebug.h"
 #include <winrt/Microsoft.UI.Dispatching.h>
 #include <winrt/Microsoft.UI.Windowing.h>
+#include <winrt/Windows.UI.Text.h>
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <cstdlib>
 #include <cstring>
 #include <functional>
@@ -566,6 +568,51 @@ namespace
         }
     }
 
+    int stringIndex(std::vector<std::string> const& values, std::string const& value, int fallback)
+    {
+        if (!value.empty())
+        {
+            for (int i = 0; i < (int) values.size(); ++i)
+            {
+                if (values[(size_t) i] == value)
+                    return i;
+            }
+        }
+
+        return fallback;
+    }
+
+    int audioPersistenceModeIndex(std::string mode)
+    {
+        std::transform(mode.begin(), mode.end(), mode.begin(), [](unsigned char c) { return (char) std::tolower(c); });
+        if (mode == "lastselected" || mode == "last-selected" || mode == "last_selected")
+            return 1;
+        if (mode == "custom")
+            return 2;
+
+        return 0;
+    }
+
+    std::string audioPersistenceModeValue(int index)
+    {
+        if (index == 1)
+            return "lastSelected";
+        if (index == 2)
+            return "custom";
+
+        return "disabled";
+    }
+
+    void styleNumberBox(NumberBox const& box)
+    {
+        box.HorizontalAlignment(HorizontalAlignment::Stretch);
+        box.MinHeight(42);
+        box.MinWidth(160);
+        box.SpinButtonPlacementMode(NumberBoxSpinButtonPlacementMode::Compact);
+        box.SmallChange(1);
+        box.LargeChange(5);
+    }
+
     std::wstring environmentPath(wchar_t const* name)
     {
         wchar_t buffer[MAX_PATH] {};
@@ -574,6 +621,38 @@ namespace
             return {};
 
         return buffer;
+    }
+
+    std::wstring uiSettingsFilePath()
+    {
+        auto base = environmentPath(L"LOCALAPPDATA");
+        if (base.empty())
+            base = L".";
+
+        const auto directory = base + L"\\LightHostModern";
+        CreateDirectoryW(directory.c_str(), nullptr);
+        return directory + L"\\ui-settings.ini";
+    }
+
+    int clampBackdropModeIndex(int index)
+    {
+        if (index < 0 || index > 3)
+            return 0;
+
+        return index;
+    }
+
+    int loadBackdropModeIndex()
+    {
+        const auto settingsFile = uiSettingsFilePath();
+        return clampBackdropModeIndex((int) GetPrivateProfileIntW(L"Appearance", L"BackdropMode", 0, settingsFile.c_str()));
+    }
+
+    void saveBackdropModeIndex(int index)
+    {
+        const auto value = std::to_wstring(clampBackdropModeIndex(index));
+        const auto settingsFile = uiSettingsFilePath();
+        WritePrivateProfileStringW(L"Appearance", L"BackdropMode", value.c_str(), settingsFile.c_str());
     }
 
     void appendPathIfAvailable(std::vector<std::string>& paths, std::wstring const& base, wchar_t const* suffix)
@@ -686,6 +765,38 @@ namespace
     bool isChecked(ToggleSwitch const& toggle)
     {
         return toggle.IsOn();
+    }
+
+    struct AudioChoiceEntry
+    {
+        std::string backend;
+        std::string role;
+        std::string name;
+    };
+
+    AudioChoiceEntry parseAudioChoiceEntry(std::string const& value)
+    {
+        AudioChoiceEntry entry;
+
+        const auto first = value.find('|');
+        if (first == std::string::npos)
+        {
+            entry.name = value;
+            return entry;
+        }
+
+        const auto second = value.find('|', first + 1);
+        if (second == std::string::npos)
+        {
+            entry.backend = value.substr(0, first);
+            entry.name = value.substr(first + 1);
+            return entry;
+        }
+
+        entry.backend = value.substr(0, first);
+        entry.role = value.substr(first + 1, second - first - 1);
+        entry.name = value.substr(second + 1);
+        return entry;
     }
 
     struct PluginRowData
@@ -1615,7 +1726,7 @@ namespace winrt::LightHostWinUI::implementation
         backdropModeBox = ComboBox();
         styleCombo(backdropModeBox);
         BackdropModeBoxHost().Children().Append(backdropModeBox);
-        setComboItems(backdropModeBox, { "Mica", "Mica Alt", "Acrylic", "Solid" }, 0);
+        setComboItems(backdropModeBox, { "Mica", "Mica Alt", "Acrylic", "Solid" }, loadBackdropModeIndex());
 
         iconModeBox = ComboBox();
         styleCombo(iconModeBox);
@@ -1625,6 +1736,42 @@ namespace winrt::LightHostWinUI::implementation
         enableVst2CheckBox = ToggleSwitch();
         enableVst2CheckBox.Header(box_value(hstring(L"Enable VST2 plugins")));
         EnableVst2CheckBoxHost().Children().Append(enableVst2CheckBox);
+
+        audioPersistenceModeBox = ComboBox();
+        styleCombo(audioPersistenceModeBox);
+        AudioPersistenceModeBoxHost().Children().Append(audioPersistenceModeBox);
+        setComboItems(audioPersistenceModeBox, { "Disabled", "Last selected device", "Custom device" }, 0);
+
+        audioRecoveryRetrySecondsBox = NumberBox();
+        audioRecoveryRetrySecondsBox.Header(box_value(hstring(L"Retry interval")));
+        audioRecoveryRetrySecondsBox.Minimum(1);
+        audioRecoveryRetrySecondsBox.Maximum(60);
+        audioRecoveryRetrySecondsBox.Value(5);
+        styleNumberBox(audioRecoveryRetrySecondsBox);
+        AudioRecoveryRetrySecondsBoxHost().Children().Append(audioRecoveryRetrySecondsBox);
+
+        audioRecoveryRetryAttemptsBox = NumberBox();
+        audioRecoveryRetryAttemptsBox.Header(box_value(hstring(L"Max attempts")));
+        audioRecoveryRetryAttemptsBox.Minimum(1);
+        audioRecoveryRetryAttemptsBox.Maximum(100);
+        audioRecoveryRetryAttemptsBox.Value(10);
+        styleNumberBox(audioRecoveryRetryAttemptsBox);
+        AudioRecoveryRetryAttemptsBoxHost().Children().Append(audioRecoveryRetryAttemptsBox);
+
+        customRecoveryBackendBox = ComboBox();
+        styleCombo(customRecoveryBackendBox);
+        CustomRecoveryBackendBoxHost().Children().Append(customRecoveryBackendBox);
+
+        customRecoveryInputBox = ComboBox();
+        styleCombo(customRecoveryInputBox);
+        CustomRecoveryInputBoxHost().Children().Append(customRecoveryInputBox);
+
+        customRecoveryOutputBox = ComboBox();
+        styleCombo(customRecoveryOutputBox);
+        CustomRecoveryOutputBoxHost().Children().Append(customRecoveryOutputBox);
+
+        styleButton(RetryAudioDeviceButton());
+        styleButton(ChooseAudioDeviceButton());
 
         scanVstCheckBox = CheckBox();
         scanVstCheckBox.Content(box_value(hstring(L"VST")));
@@ -1688,6 +1835,9 @@ namespace winrt::LightHostWinUI::implementation
         styleButton(ScanDefaultPluginsButton());
         styleButton(RemoveMissingPluginsButton());
         styleButton(ClearPluginDatabaseButton());
+        styleButton(InputChannelsToggleAllButton());
+        styleButton(OutputChannelsToggleAllButton());
+        styleButton(ManageEnabledAudioDevicesButton());
         styleButton(CopyLogsButton());
         styleButton(SaveLogButton());
 
@@ -1707,7 +1857,7 @@ namespace winrt::LightHostWinUI::implementation
         }
         catch (...) {}
         styleTitleBar(AppWindow(), true);
-        applyBackdrop(0);
+        applyBackdrop(BackdropModeBox().SelectedIndex() < 0 ? loadBackdropModeIndex() : BackdropModeBox().SelectedIndex());
         resetDefaultPluginScanPaths();
         Closed({ this, &MainWindow::Window_Closed });
 
@@ -1746,6 +1896,17 @@ namespace winrt::LightHostWinUI::implementation
         StartWithWindowsCheckBox().Toggled({ this, &MainWindow::StartWithWindowsCheckBox_Changed });
         CloseToTraySwitch().Toggled({ this, &MainWindow::CloseToTraySwitch_Toggled });
         EnableVst2CheckBox().Toggled({ this, &MainWindow::EnableVst2CheckBox_Changed });
+        AudioPersistenceModeBox().SelectionChanged({ this, &MainWindow::AudioPersistenceModeBox_SelectionChanged });
+        AudioRecoveryRetrySecondsBox().ValueChanged({ this, &MainWindow::AudioRecoveryRetrySecondsBox_ValueChanged });
+        AudioRecoveryRetryAttemptsBox().ValueChanged({ this, &MainWindow::AudioRecoveryRetryAttemptsBox_ValueChanged });
+        CustomRecoveryBackendBox().SelectionChanged({ this, &MainWindow::CustomRecoveryBackendBox_SelectionChanged });
+        CustomRecoveryInputBox().SelectionChanged({ this, &MainWindow::CustomRecoveryInputBox_SelectionChanged });
+        CustomRecoveryOutputBox().SelectionChanged({ this, &MainWindow::CustomRecoveryOutputBox_SelectionChanged });
+        RetryAudioDeviceButton().Click({ this, &MainWindow::RetryAudioDevice_Click });
+        ChooseAudioDeviceButton().Click({ this, &MainWindow::ChooseAudioDevice_Click });
+        ManageEnabledAudioDevicesButton().Click({ this, &MainWindow::ManageEnabledAudioDevices_Click });
+        InputChannelsToggleAllButton().Click({ this, &MainWindow::InputChannelsToggleAll_Click });
+        OutputChannelsToggleAllButton().Click({ this, &MainWindow::OutputChannelsToggleAll_Click });
         CloseQuitsAppRadioButton().Checked({ this, &MainWindow::CloseBehaviorRadioButton_Checked });
         CloseToTrayRadioButton().Checked({ this, &MainWindow::CloseBehaviorRadioButton_Checked });
         AudioBackendBox().SelectionChanged({ this, &MainWindow::AudioBackendBox_SelectionChanged });
@@ -1757,7 +1918,10 @@ namespace winrt::LightHostWinUI::implementation
         BackdropModeBox().SelectionChanged([this](IInspectable const&, SelectionChangedEventArgs const&)
         {
             if (BackdropModeBox() && BackdropModeBox().SelectedIndex() >= 0)
+            {
+                saveBackdropModeIndex(BackdropModeBox().SelectedIndex());
                 applyBackdrop(BackdropModeBox().SelectedIndex());
+            }
         });
         AudioBackendBox().DropDownOpened({ this, &MainWindow::ComboBox_DropDownOpened });
         InputBox().DropDownOpened({ this, &MainWindow::ComboBox_DropDownOpened });
@@ -1765,12 +1929,20 @@ namespace winrt::LightHostWinUI::implementation
         SampleRateBox().DropDownOpened({ this, &MainWindow::ComboBox_DropDownOpened });
         BufferSizeBox().DropDownOpened({ this, &MainWindow::ComboBox_DropDownOpened });
         BackdropModeBox().DropDownOpened({ this, &MainWindow::ComboBox_DropDownOpened });
+        AudioPersistenceModeBox().DropDownOpened({ this, &MainWindow::ComboBox_DropDownOpened });
+        CustomRecoveryBackendBox().DropDownOpened({ this, &MainWindow::ComboBox_DropDownOpened });
+        CustomRecoveryInputBox().DropDownOpened({ this, &MainWindow::ComboBox_DropDownOpened });
+        CustomRecoveryOutputBox().DropDownOpened({ this, &MainWindow::ComboBox_DropDownOpened });
         AudioBackendBox().DropDownClosed({ this, &MainWindow::ComboBox_DropDownClosed });
         InputBox().DropDownClosed({ this, &MainWindow::ComboBox_DropDownClosed });
         OutputBox().DropDownClosed({ this, &MainWindow::ComboBox_DropDownClosed });
         SampleRateBox().DropDownClosed({ this, &MainWindow::ComboBox_DropDownClosed });
         BufferSizeBox().DropDownClosed({ this, &MainWindow::ComboBox_DropDownClosed });
         BackdropModeBox().DropDownClosed({ this, &MainWindow::ComboBox_DropDownClosed });
+        AudioPersistenceModeBox().DropDownClosed({ this, &MainWindow::ComboBox_DropDownClosed });
+        CustomRecoveryBackendBox().DropDownClosed({ this, &MainWindow::ComboBox_DropDownClosed });
+        CustomRecoveryInputBox().DropDownClosed({ this, &MainWindow::ComboBox_DropDownClosed });
+        CustomRecoveryOutputBox().DropDownClosed({ this, &MainWindow::ComboBox_DropDownClosed });
         RunningPluginsListView().AllowDrop(true);
         RunningPluginsListView().DragOver({ this, &MainWindow::RunningPluginItem_DragOver });
         RunningPluginsListView().Drop({ this, &MainWindow::RunningPluginItem_Drop });
@@ -2185,6 +2357,32 @@ namespace winrt::LightHostWinUI::implementation
         const int endIndex = (std::max)(startIndex, std::atoi(tag.substr(secondSeparator + 1).c_str()));
         for (int channelIndex = startIndex; channelIndex <= endIndex; ++channelIndex)
             sendCommand(command + ":" + std::to_string(channelIndex) + ":" + checkedValue);
+    }
+
+    void MainWindow::InputChannelsToggleAll_Click(IInspectable const&, RoutedEventArgs const&)
+    {
+        bool shouldCheck = true;
+        try
+        {
+            shouldCheck = unbox_value<hstring>(InputChannelsToggleAllButton().Tag()) == L"check";
+        }
+        catch (...) {}
+
+        if (sendCommand(std::string("set-all-input-channels:") + (shouldCheck ? "1" : "0")))
+            showNotification(shouldCheck ? L"All input channels enabled." : L"All input channels disabled.");
+    }
+
+    void MainWindow::OutputChannelsToggleAll_Click(IInspectable const&, RoutedEventArgs const&)
+    {
+        bool shouldCheck = true;
+        try
+        {
+            shouldCheck = unbox_value<hstring>(OutputChannelsToggleAllButton().Tag()) == L"check";
+        }
+        catch (...) {}
+
+        if (sendCommand(std::string("set-all-output-channels:") + (shouldCheck ? "1" : "0")))
+            showNotification(shouldCheck ? L"All output channels enabled." : L"All output channels disabled.");
     }
 
     void MainWindow::ChannelButton_Click(IInspectable const& sender, RoutedEventArgs const&)
@@ -2622,6 +2820,37 @@ namespace winrt::LightHostWinUI::implementation
         renderedKeys = keys;
     }
 
+    void MainWindow::syncChannelToggleButton(Button const& button,
+        std::vector<ChannelRowData> const& rows,
+        std::string const&)
+    {
+        const bool hasRows = !rows.empty();
+        const bool allActive = hasRows && std::all_of(rows.begin(), rows.end(), [](ChannelRowData const& row)
+        {
+            return row.active;
+        });
+
+        button.IsEnabled(hasRows);
+        button.Content(box_value(hstring(allActive ? L"Uncheck all" : L"Check all")));
+        button.Tag(box_value(hstring(allActive ? L"uncheck" : L"check")));
+        ToolTipService::SetToolTip(button, box_value(hstring(allActive
+            ? L"Disable every visible channel"
+            : L"Enable every visible channel")));
+    }
+
+    void MainWindow::syncEnabledAudioChoicesSummary()
+    {
+        if (disabledAudioBackendCount == 0 && disabledAudioDeviceCount == 0)
+        {
+            EnabledAudioChoicesSummaryText().Text(L"All detected audio backends and devices are enabled.");
+            return;
+        }
+
+        EnabledAudioChoicesSummaryText().Text(hs(std::to_string(disabledAudioBackendCount) + " backend(s) and "
+            + std::to_string(disabledAudioDeviceCount)
+            + " device choice(s) are disabled. Disabled choices are never selected automatically or manually."));
+    }
+
     void MainWindow::updateDebugControls()
     {
         const bool debug = winUIDebugEnabled();
@@ -2780,6 +3009,21 @@ namespace winrt::LightHostWinUI::implementation
         const auto currentBackendIndex = (int) extractNumber(json, "currentBackendIndex", -1);
         const auto currentInputDeviceIndex = (int) extractNumber(json, "currentInputDeviceIndex", -1);
         const auto currentOutputDeviceIndex = (int) extractNumber(json, "currentOutputDeviceIndex", -1);
+        const auto audioPersistenceMode = extractString(json, "audioPersistenceMode", "disabled");
+        const auto audioPersistenceRetrySeconds = (int) extractNumber(json, "audioPersistenceRetrySeconds", 5);
+        const auto audioPersistenceRetryAttempts = (int) extractNumber(json, "audioPersistenceRetryAttempts", 10);
+        const auto audioPersistenceCustomBackend = extractString(json, "audioPersistenceCustomBackend");
+        const auto audioPersistenceCustomInputDevice = extractString(json, "audioPersistenceCustomInputDevice");
+        const auto audioPersistenceCustomOutputDevice = extractString(json, "audioPersistenceCustomOutputDevice");
+        const auto recoveryState = extractString(json, "recoveryState", "running");
+        const auto recoveryMessage = extractString(json, "recoveryMessage");
+        const auto recoveryAttempt = (int) extractNumber(json, "recoveryAttempt", 0);
+        const auto recoveryMaxAttempts = (int) extractNumber(json, "recoveryMaxAttempts", audioPersistenceRetryAttempts);
+        const auto recoveryTargetBackend = extractString(json, "recoveryTargetBackend");
+        const auto recoveryTargetInputDevice = extractString(json, "recoveryTargetInputDevice");
+        const auto recoveryTargetOutputDevice = extractString(json, "recoveryTargetOutputDevice");
+        disabledAudioBackendCount = (int) extractStringArray(json, "blockedAudioBackends").size();
+        disabledAudioDeviceCount = (int) extractStringArray(json, "blockedAudioDeviceLabels").size();
 
         RunningPluginsTabButton().Content(box_value(hs("Running (" + std::to_string((int) pluginRows.size()) + ")")));
         InstalledPluginsTabButton().Content(box_value(hs("Installed (" + std::to_string((int) knownPluginRows.size()) + ")")));
@@ -2798,6 +3042,9 @@ namespace winrt::LightHostWinUI::implementation
         const auto outputDeviceText = outputDeviceNames.empty() || currentOutputDeviceIndex < 0 || currentOutputDeviceIndex >= (int) outputDeviceNames.size()
             ? device
             : outputDeviceNames[(size_t) currentOutputDeviceIndex];
+        currentAudioBackendName = backend;
+        currentAudioInputDeviceName = isAsioBackend ? device : inputDeviceText;
+        currentAudioOutputDeviceName = isAsioBackend ? device : outputDeviceText;
 
         DashboardRoutingTitleText().Text(isAsioBackend ? L"Device" : L"Input and Output");
         DashboardInputDeviceLabel().Text(isAsioBackend ? L"Device" : L"Input device");
@@ -2838,6 +3085,8 @@ namespace winrt::LightHostWinUI::implementation
         setVisible(InputChannelGroup(), !groupedInputChannels.empty());
         syncChannelCheckBoxes(OutputChannelsPanel(), groupedOutputChannels, "set-output-channel", renderedOutputChannelKeys);
         syncChannelCheckBoxes(InputChannelsPanel(), groupedInputChannels, "set-input-channel", renderedInputChannelKeys);
+        syncChannelToggleButton(OutputChannelsToggleAllButton(), groupedOutputChannels, "set-all-output-channels");
+        syncChannelToggleButton(InputChannelsToggleAllButton(), groupedInputChannels, "set-all-input-channels");
 
         std::vector<std::string> sampleRateItems;
         int selectedSampleRateIndex = -1;
@@ -2885,6 +3134,67 @@ namespace winrt::LightHostWinUI::implementation
         ScanVstCheckBox().IsEnabled(vst2HostEnabled);
         if (!vst2HostEnabled)
             ScanVstCheckBox().IsChecked(false);
+
+        const int persistenceIndex = audioPersistenceModeIndex(audioPersistenceMode);
+        setComboItems(AudioPersistenceModeBox(), { "Disabled", "Last selected device", "Custom device" }, persistenceIndex);
+        AudioRecoveryRetrySecondsBox().Value((std::max)(1, audioPersistenceRetrySeconds));
+        AudioRecoveryRetryAttemptsBox().Value((std::max)(1, audioPersistenceRetryAttempts));
+
+        const int customBackendIndex = stringIndex(backendNames, audioPersistenceCustomBackend, currentBackendIndex);
+        setComboItems(CustomRecoveryBackendBox(), backendNames, customBackendIndex);
+        const auto& customInputCandidates = inputDeviceNames.empty() ? outputDeviceNames : inputDeviceNames;
+        const auto& customOutputCandidates = outputDeviceNames.empty() ? inputDeviceNames : outputDeviceNames;
+        const int customInputIndex = stringIndex(customInputCandidates, audioPersistenceCustomInputDevice, currentInputDeviceIndex);
+        const int customOutputIndex = stringIndex(customOutputCandidates, audioPersistenceCustomOutputDevice, currentOutputDeviceIndex);
+        setComboItems(CustomRecoveryInputBox(), customInputCandidates, customInputIndex);
+        setComboItems(CustomRecoveryOutputBox(), customOutputCandidates, customOutputIndex);
+        AudioPersistenceRetryPolicyGrid().Visibility(persistenceIndex == 0 ? Visibility::Collapsed : Visibility::Visible);
+        CustomAudioPersistenceCard().Visibility(persistenceIndex == 2 ? Visibility::Visible : Visibility::Collapsed);
+        CustomAudioPersistenceGrid().Visibility(persistenceIndex == 2 ? Visibility::Visible : Visibility::Collapsed);
+        const auto selectedCustomBackend = (customBackendIndex >= 0 && (size_t) customBackendIndex < backendNames.size())
+            ? backendNames[(size_t) customBackendIndex]
+            : backend;
+        const bool customBackendIsAsio = selectedCustomBackend == "ASIO";
+        CustomRecoveryInputLabel().Text(customBackendIsAsio ? L"Device" : L"Input device");
+        CustomRecoveryOutputRow().Visibility(customBackendIsAsio ? Visibility::Collapsed : Visibility::Visible);
+        RetryAudioDeviceButton().IsEnabled(persistenceIndex != 0);
+        syncEnabledAudioChoicesSummary();
+
+        std::string persistenceStatus;
+        if (persistenceIndex == 0)
+        {
+            persistenceStatus = "Device persistence is disabled. Light Host Modern will use the default audio recovery behavior.";
+        }
+        else if (!recoveryMessage.empty())
+        {
+            persistenceStatus = recoveryMessage;
+        }
+        else if (recoveryState == "retrying")
+        {
+            persistenceStatus = "Retrying preferred audio device (" + std::to_string(recoveryAttempt) + "/" + std::to_string(recoveryMaxAttempts) + ").";
+        }
+        else if (recoveryState == "failed")
+        {
+            persistenceStatus = "Preferred audio device is unavailable. Choose another device or retry manually.";
+        }
+        else
+        {
+            persistenceStatus = "Preferred audio device is available.";
+        }
+
+        if (persistenceIndex != 0 && (!recoveryTargetBackend.empty() || !recoveryTargetInputDevice.empty() || !recoveryTargetOutputDevice.empty()))
+        {
+            persistenceStatus += " Target: ";
+            persistenceStatus += recoveryTargetBackend.empty() ? backend : recoveryTargetBackend;
+            const auto targetInput = recoveryTargetInputDevice.empty() ? inputDeviceText : recoveryTargetInputDevice;
+            const auto targetOutput = recoveryTargetOutputDevice.empty() ? outputDeviceText : recoveryTargetOutputDevice;
+            if (!targetInput.empty())
+                persistenceStatus += " / " + targetInput;
+            if (!targetOutput.empty() && targetOutput != targetInput)
+                persistenceStatus += " -> " + targetOutput;
+            persistenceStatus += ".";
+        }
+        AudioRecoveryStatusText().Text(hs(persistenceStatus));
         syncingConfigControls = false;
 
         RunningPluginsSummaryText().Text(L"");
@@ -3610,6 +3920,352 @@ namespace winrt::LightHostWinUI::implementation
         vst2RestartRequired = true;
         sendCommand(std::string("set-enable-vst2:") + (isChecked(EnableVst2CheckBox()) ? "1" : "0"));
         Vst2StatusText().Text(L"Restart this session to apply the changes.");
+    }
+
+    void MainWindow::AudioPersistenceModeBox_SelectionChanged(IInspectable const&, SelectionChangedEventArgs const&)
+    {
+        if (syncingConfigControls || !AudioPersistenceModeBox() || AudioPersistenceModeBox().SelectedIndex() < 0)
+            return;
+
+        const auto mode = audioPersistenceModeValue(AudioPersistenceModeBox().SelectedIndex());
+        sendCommand("set-audio-persistence-mode:" + mode);
+        refreshSnapshot();
+    }
+
+    void MainWindow::AudioRecoveryRetrySecondsBox_ValueChanged(NumberBox const&, NumberBoxValueChangedEventArgs const& args)
+    {
+        if (syncingConfigControls)
+            return;
+
+        const auto value = args.NewValue();
+        if (value != value)
+            return;
+
+        const int retrySeconds = (std::max)(1, (std::min)(60, (int) std::round(value)));
+        sendCommand("set-audio-persistence-retry-seconds:" + std::to_string(retrySeconds));
+    }
+
+    void MainWindow::AudioRecoveryRetryAttemptsBox_ValueChanged(NumberBox const&, NumberBoxValueChangedEventArgs const& args)
+    {
+        if (syncingConfigControls)
+            return;
+
+        const auto value = args.NewValue();
+        if (value != value)
+            return;
+
+        const int retryAttempts = (std::max)(1, (std::min)(100, (int) std::round(value)));
+        sendCommand("set-audio-persistence-retry-attempts:" + std::to_string(retryAttempts));
+    }
+
+    void MainWindow::CustomRecoveryBackendBox_SelectionChanged(IInspectable const&, SelectionChangedEventArgs const&)
+    {
+        if (syncingConfigControls || !CustomRecoveryBackendBox() || CustomRecoveryBackendBox().SelectedIndex() < 0)
+            return;
+
+        sendCommand("set-audio-persistence-custom-backend:" + std::to_string(CustomRecoveryBackendBox().SelectedIndex()));
+        refreshSnapshot();
+    }
+
+    void MainWindow::CustomRecoveryInputBox_SelectionChanged(IInspectable const&, SelectionChangedEventArgs const&)
+    {
+        if (syncingConfigControls || !CustomRecoveryInputBox() || CustomRecoveryInputBox().SelectedIndex() < 0)
+            return;
+
+        sendCommand("set-audio-persistence-custom-input:" + std::to_string(CustomRecoveryInputBox().SelectedIndex()));
+        refreshSnapshot();
+    }
+
+    void MainWindow::CustomRecoveryOutputBox_SelectionChanged(IInspectable const&, SelectionChangedEventArgs const&)
+    {
+        if (syncingConfigControls || !CustomRecoveryOutputBox() || CustomRecoveryOutputBox().SelectedIndex() < 0)
+            return;
+
+        sendCommand("set-audio-persistence-custom-output:" + std::to_string(CustomRecoveryOutputBox().SelectedIndex()));
+        refreshSnapshot();
+    }
+
+    void MainWindow::RetryAudioDevice_Click(IInspectable const&, RoutedEventArgs const&)
+    {
+        if (sendCommand("retry-audio-device"))
+            showNotification(L"Audio device retry started.");
+        refreshSnapshot();
+    }
+
+    void MainWindow::ChooseAudioDevice_Click(IInspectable const&, RoutedEventArgs const&)
+    {
+        showSection(L"Audio");
+    }
+
+    void MainWindow::ManageEnabledAudioDevices_Click(IInspectable const&, RoutedEventArgs const&)
+    {
+        if (hostPipeName.empty())
+        {
+            auto dialog = ContentDialog();
+            dialog.XamlRoot(RootLayout().XamlRoot());
+            dialog.Title(box_value(hstring(L"Enabled devices")));
+            dialog.Content(box_value(hstring(L"Light Host Modern is not connected to the audio host.")));
+            dialog.CloseButtonText(L"Close");
+            dialog.ShowAsync();
+            return;
+        }
+
+        const auto choicesJson = requestHost(hostPipeName, "enabled-audio-choices");
+        if (choicesJson.empty() || choicesJson.find("\"status\":\"ok\"") == std::string::npos)
+        {
+            auto dialog = ContentDialog();
+            dialog.XamlRoot(RootLayout().XamlRoot());
+            dialog.Title(box_value(hstring(L"Enabled devices")));
+            dialog.Content(box_value(hstring(L"Could not load the available audio device list.")));
+            dialog.CloseButtonText(L"Close");
+            dialog.ShowAsync();
+            return;
+        }
+
+        allAudioBackendNames = extractStringArray(choicesJson, "allAudioBackendNames");
+        allAudioBackendEnabled = extractBoolArray(choicesJson, "allAudioBackendEnabled");
+        allAudioDeviceChoices = extractStringArray(choicesJson, "allAudioDeviceChoices");
+        allAudioDeviceChoiceEnabled = extractBoolArray(choicesJson, "allAudioDeviceChoiceEnabled");
+
+        if (allAudioBackendNames.empty())
+        {
+            auto dialog = ContentDialog();
+            dialog.XamlRoot(RootLayout().XamlRoot());
+            dialog.Title(box_value(hstring(L"Enabled devices")));
+            dialog.Content(box_value(hstring(L"No audio backends were detected.")));
+            dialog.CloseButtonText(L"Close");
+            dialog.ShowAsync();
+            return;
+        }
+
+        auto backendEnabled = std::make_shared<std::vector<bool>>(allAudioBackendEnabled);
+        auto deviceEnabled = std::make_shared<std::vector<bool>>(allAudioDeviceChoiceEnabled);
+        backendEnabled->resize(allAudioBackendNames.size(), true);
+        deviceEnabled->resize(allAudioDeviceChoices.size(), true);
+        const auto originalBackendEnabled = *backendEnabled;
+        const auto originalDeviceEnabled = *deviceEnabled;
+
+        auto backendBox = ComboBox();
+        styleCombo(backendBox);
+        setComboItems(backendBox, allAudioBackendNames, 0);
+
+        auto backendToggle = CheckBox();
+        backendToggle.Content(box_value(hstring(L"Enable this audio backend")));
+        backendToggle.MinHeight(40);
+
+        auto deviceSections = StackPanel();
+        deviceSections.Spacing(12);
+
+        auto updating = std::make_shared<bool>(false);
+        auto rebuild = std::make_shared<std::function<void()>>();
+        *rebuild = [this, backendBox, backendToggle, deviceSections, backendEnabled, deviceEnabled, updating, rebuild]()
+        {
+            int backendIndex = backendBox.SelectedIndex();
+            if (backendIndex < 0 || backendIndex >= (int) allAudioBackendNames.size())
+                backendIndex = 0;
+
+            const auto backendName = allAudioBackendNames[(size_t) backendIndex];
+            const bool enabled = (*backendEnabled)[(size_t) backendIndex];
+
+            *updating = true;
+            backendToggle.IsChecked(enabled);
+            *updating = false;
+
+            deviceSections.Children().Clear();
+
+            auto appendSection = [this, backendName, enabled, deviceEnabled, deviceSections, updating](std::string const& role, wchar_t const* title)
+            {
+                auto section = StackPanel();
+                section.Spacing(10);
+
+                bool hasItems = false;
+                auto titleBlock = TextBlock();
+                titleBlock.Text(title);
+                titleBlock.FontWeight(Windows::UI::Text::FontWeights::SemiBold());
+                section.Children().Append(titleBlock);
+
+                for (int i = 0; i < (int) allAudioDeviceChoices.size(); ++i)
+                {
+                    const auto entry = parseAudioChoiceEntry(allAudioDeviceChoices[(size_t) i]);
+                    if (entry.backend != backendName || entry.role != role)
+                        continue;
+
+                    hasItems = true;
+                    auto row = Grid();
+                    row.MinHeight(40);
+                    row.ColumnSpacing(10);
+                    row.ColumnDefinitions().Append(ColumnDefinition());
+                    row.ColumnDefinitions().GetAt(0).Width(GridLengthHelper::FromPixels(34));
+                    row.ColumnDefinitions().Append(ColumnDefinition());
+                    row.ColumnDefinitions().GetAt(1).Width(GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
+
+                    auto box = CheckBox();
+                    box.Tag(box_value(i));
+                    box.IsChecked(static_cast<bool>((*deviceEnabled)[(size_t) i]));
+                    box.IsEnabled(enabled);
+                    box.VerticalAlignment(VerticalAlignment::Center);
+                    box.HorizontalAlignment(HorizontalAlignment::Center);
+                    box.MinHeight(32);
+                    box.MinWidth(32);
+                    box.Checked([deviceEnabled, updating, i](IInspectable const&, RoutedEventArgs const&)
+                    {
+                        if (*updating)
+                            return;
+                        if (i >= 0 && i < (int) deviceEnabled->size())
+                            (*deviceEnabled)[(size_t) i] = true;
+                    });
+                    box.Unchecked([deviceEnabled, updating, i](IInspectable const&, RoutedEventArgs const&)
+                    {
+                        if (*updating)
+                            return;
+                        if (i >= 0 && i < (int) deviceEnabled->size())
+                            (*deviceEnabled)[(size_t) i] = false;
+                    });
+                    Grid::SetColumn(box, 0);
+                    row.Children().Append(box);
+
+                    auto label = TextBlock();
+                    label.Text(hs(entry.name));
+                    label.VerticalAlignment(VerticalAlignment::Center);
+                    label.TextTrimming(TextTrimming::CharacterEllipsis);
+                    ToolTipService::SetToolTip(label, box_value(hs(entry.name)));
+                    Grid::SetColumn(label, 1);
+                    row.Children().Append(label);
+                    section.Children().Append(row);
+                }
+
+                if (hasItems)
+                {
+                    auto sectionCard = Border();
+                    sectionCard.Background(resourceBrush(L"AppCardBrush", themedFallback(makeColor(255, 255, 255), makeColor(39, 39, 39))));
+                    sectionCard.BorderBrush(resourceBrush(L"AppCardStrokeBrush", themedFallback(makeColor(225, 225, 225), makeColor(58, 58, 58))));
+                    sectionCard.BorderThickness(ThicknessHelper::FromUniformLength(1));
+                    sectionCard.CornerRadius(CornerRadiusHelper::FromUniformRadius(8));
+                    sectionCard.Padding(ThicknessHelper::FromUniformLength(14));
+                    sectionCard.Child(section);
+                    deviceSections.Children().Append(sectionCard);
+                }
+            };
+
+            const bool isAsio = backendName == "ASIO";
+            if (isAsio)
+            {
+                appendSection("device", L"Devices");
+            }
+            else
+            {
+                appendSection("input", L"Input devices");
+                appendSection("output", L"Output devices");
+            }
+
+            if (deviceSections.Children().Size() == 0)
+            {
+                auto emptyText = TextBlock();
+                emptyText.Text(L"No devices were detected for this backend.");
+                emptyText.Foreground(resourceBrush(L"AppTextSecondaryBrush", themedFallback(makeColor(96, 96, 96), makeColor(190, 200, 214))));
+                deviceSections.Children().Append(emptyText);
+            }
+        };
+
+        backendBox.SelectionChanged([rebuild](IInspectable const&, SelectionChangedEventArgs const&)
+        {
+            (*rebuild)();
+        });
+        backendToggle.Checked([backendBox, backendEnabled, updating, rebuild](IInspectable const&, RoutedEventArgs const&)
+        {
+            if (*updating)
+                return;
+            const int index = backendBox.SelectedIndex();
+            if (index >= 0 && index < (int) backendEnabled->size())
+                (*backendEnabled)[(size_t) index] = true;
+            (*rebuild)();
+        });
+        backendToggle.Unchecked([backendBox, backendEnabled, updating, rebuild](IInspectable const&, RoutedEventArgs const&)
+        {
+            if (*updating)
+                return;
+            const int index = backendBox.SelectedIndex();
+            if (index >= 0 && index < (int) backendEnabled->size())
+                (*backendEnabled)[(size_t) index] = false;
+            (*rebuild)();
+        });
+        (*rebuild)();
+
+        auto modeCard = Border();
+        modeCard.Background(resourceBrush(L"AppCardBrush", themedFallback(makeColor(255, 255, 255), makeColor(39, 39, 39))));
+        modeCard.BorderBrush(resourceBrush(L"AppCardStrokeBrush", themedFallback(makeColor(225, 225, 225), makeColor(58, 58, 58))));
+        modeCard.BorderThickness(ThicknessHelper::FromUniformLength(1));
+        modeCard.CornerRadius(CornerRadiusHelper::FromUniformRadius(8));
+        modeCard.Padding(ThicknessHelper::FromUniformLength(14));
+
+        auto modeStack = StackPanel();
+        modeStack.Spacing(10);
+        auto hint = TextBlock();
+        hint.Text(L"Choose an audio backend, then enable only the devices Light Host Modern may use.");
+        hint.Foreground(resourceBrush(L"AppTextSecondaryBrush", themedFallback(makeColor(96, 96, 96), makeColor(190, 200, 214))));
+        hint.TextWrapping(TextWrapping::Wrap);
+        modeStack.Children().Append(hint);
+        modeStack.Children().Append(backendBox);
+        modeStack.Children().Append(backendToggle);
+        modeCard.Child(modeStack);
+
+        auto contentStack = StackPanel();
+        contentStack.Spacing(12);
+        contentStack.Children().Append(modeCard);
+        contentStack.Children().Append(deviceSections);
+
+        auto scroller = ScrollViewer();
+        scroller.VerticalScrollMode(ScrollMode::Enabled);
+        scroller.VerticalScrollBarVisibility(ScrollBarVisibility::Auto);
+        scroller.HorizontalScrollMode(ScrollMode::Disabled);
+        scroller.HorizontalScrollBarVisibility(ScrollBarVisibility::Disabled);
+        scroller.Height(480);
+        scroller.Content(contentStack);
+
+        auto dialog = ContentDialog();
+        dialog.XamlRoot(RootLayout().XamlRoot());
+        dialog.Title(box_value(hstring(L"Enabled devices")));
+        dialog.Content(scroller);
+        dialog.PrimaryButtonText(L"Save");
+        dialog.CloseButtonText(L"Cancel");
+        dialog.DefaultButton(ContentDialogButton::Primary);
+
+        auto operation = dialog.ShowAsync();
+        operation.Completed([this, backendEnabled, deviceEnabled, originalBackendEnabled, originalDeviceEnabled](auto const& async, winrt::Windows::Foundation::AsyncStatus const status)
+        {
+            if (status != winrt::Windows::Foundation::AsyncStatus::Completed)
+                return;
+
+            if (async.GetResults() != ContentDialogResult::Primary)
+                return;
+
+            DispatcherQueue().TryEnqueue([this, backendEnabled, deviceEnabled, originalBackendEnabled, originalDeviceEnabled]()
+            {
+                int changedCount = 0;
+                for (int i = 0; i < (int) backendEnabled->size() && i < (int) originalBackendEnabled.size(); ++i)
+                {
+                    if ((*backendEnabled)[(size_t) i] == originalBackendEnabled[(size_t) i])
+                        continue;
+
+                    if (sendCommand("set-enabled-audio-backend:" + std::to_string(i) + ":" + ((*backendEnabled)[(size_t) i] ? "1" : "0")))
+                        ++changedCount;
+                }
+
+                for (int i = 0; i < (int) deviceEnabled->size() && i < (int) originalDeviceEnabled.size(); ++i)
+                {
+                    if ((*deviceEnabled)[(size_t) i] == originalDeviceEnabled[(size_t) i])
+                        continue;
+
+                    if (sendCommand("set-enabled-audio-device:" + std::to_string(i) + ":" + ((*deviceEnabled)[(size_t) i] ? "1" : "0")))
+                        ++changedCount;
+                }
+
+                refreshSnapshot();
+                showNotification(changedCount == 0
+                    ? L"Enabled devices unchanged."
+                    : std::to_wstring(changedCount) + L" enabled device setting(s) updated.");
+            });
+        });
     }
 
     void MainWindow::IconModeBox_SelectionChanged(IInspectable const&, SelectionChangedEventArgs const&)

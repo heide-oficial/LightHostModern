@@ -9,6 +9,11 @@ struct DiagnosticsSnapshot
 {
 	String backend;
 	String deviceName;
+	String recoveryState;
+	String recoveryMessage;
+	String recoveryTargetBackend;
+	String recoveryTargetInputDevice;
+	String recoveryTargetOutputDevice;
 	double cpuUsagePercent = 0.0;
 	int xRunCount = 0;
 	double sampleRate = 0.0;
@@ -17,6 +22,8 @@ struct DiagnosticsSnapshot
 	int outputLatency = 0;
 	int inputChannels = 0;
 	int outputChannels = 0;
+	int recoveryAttempt = 0;
+	int recoveryMaxAttempts = 0;
 	float inputLevel = 0.0f;
 	float outputLevel = 0.0f;
 	int activePlugins = 0;
@@ -51,6 +58,40 @@ struct AudioDeviceConfiguration
 	int maxOutputChannels = 0;
 };
 
+struct AudioRecoveryConfiguration
+{
+	String mode;
+	int retrySeconds = 5;
+	int retryAttempts = 10;
+	String customBackend;
+	String customInputDevice;
+	String customOutputDevice;
+	String lastBackend;
+	String lastInputDevice;
+	String lastOutputDevice;
+};
+
+struct BlockedAudioDeviceChoice
+{
+	String backendName;
+	String role;
+	String deviceName;
+};
+
+struct AudioBlocklistConfiguration
+{
+	std::vector<String> blockedBackends;
+	std::vector<BlockedAudioDeviceChoice> blockedDevices;
+};
+
+struct AvailableAudioChoicesConfiguration
+{
+	std::vector<String> backendNames;
+	std::vector<bool> backendEnabled;
+	std::vector<BlockedAudioDeviceChoice> deviceChoices;
+	std::vector<bool> deviceEnabled;
+};
+
 class PluginStateStore
 {
 public:
@@ -72,7 +113,8 @@ class DeviceController
 {
 public:
 	String initialise(AudioDeviceManager& deviceManager, const XmlElement* savedAudioState);
-	void recoverIfNeeded(AudioDeviceManager& deviceManager, int& failedAudioRecoveryAttempts);
+	void recoverIfNeeded(AudioDeviceManager& deviceManager, AudioRecoveryConfiguration const& recoveryConfig,
+		int& failedAudioRecoveryAttempts, String& recoveryState, String& recoveryMessage);
 	DiagnosticsSnapshot createDiagnosticsSnapshot(AudioDeviceManager& deviceManager) const;
 };
 
@@ -89,6 +131,9 @@ public:
 	std::vector<PluginDescription> getActivePluginsSorted() const;
 	std::vector<PluginDescription> getKnownPluginsSorted() const;
 	AudioDeviceConfiguration getAudioDeviceConfiguration();
+	AudioRecoveryConfiguration getAudioRecoveryConfiguration() const;
+	AudioBlocklistConfiguration getAudioBlocklistConfiguration() const;
+	AvailableAudioChoicesConfiguration getAvailableAudioChoicesConfiguration();
 	bool isVst2FormatActive() const;
 	bool isPluginBypassed(int sortedIndex) const;
 	bool isKnownPluginMenuId(int menuId) const;
@@ -104,6 +149,22 @@ public:
 	bool setAudioOutputChannelCount(int channelCount);
 	bool setAudioInputChannelEnabled(int channelIndex, bool enabled);
 	bool setAudioOutputChannelEnabled(int channelIndex, bool enabled);
+	bool setAllAudioInputChannelsEnabled(bool enabled);
+	bool setAllAudioOutputChannelsEnabled(bool enabled);
+	bool setAudioPersistenceMode(const String& mode);
+	bool setAudioPersistenceRetrySeconds(int seconds);
+	bool setAudioPersistenceRetryAttempts(int attempts);
+	bool setAudioPersistenceCustomBackendByIndex(int backendIndex);
+	bool setAudioPersistenceCustomInputByIndex(int deviceIndex);
+	bool setAudioPersistenceCustomOutputByIndex(int deviceIndex);
+	bool retryPreferredAudioDeviceNow();
+	bool addBlockedAudioBackend(const String& backendName);
+	bool addBlockedAudioInputDevice(const String& deviceName);
+	bool addBlockedAudioOutputDevice(const String& deviceName);
+	bool removeBlockedAudioBackend(int index);
+	bool removeBlockedAudioDevice(int index);
+	bool setAudioBackendEnabledByIndex(int index, bool enabled);
+	bool setAudioDeviceChoiceEnabledByIndex(int index, bool enabled);
 
 	void scanDefaultPluginLocations(bool scanVst, bool scanVst3);
 	void scanPluginPath(const String& path, bool scanVst, bool scanVst3);
@@ -148,12 +209,22 @@ private:
 	void recordProcessFailures();
 	void logDiagnosticsSnapshot();
 	std::unique_ptr<XmlElement> getXmlValueOrClear(const String& key);
+	void rememberLastSelectedAudioDevice();
+	bool applyPreferredAudioDevice(AudioRecoveryConfiguration const& recoveryConfig, bool manualRetry);
+	bool isAudioBackendBlocked(const String& backendName) const;
+	bool isAudioDeviceBlocked(const String& backendName, const String& role, const String& deviceName) const;
+	bool isAudioDeviceChoiceAllowed(const String& backendName,
+	                                const String& inputDeviceName,
+	                                const String& outputDeviceName) const;
+	void closeCurrentAudioDeviceIfBlocked(const String& context);
 
 	bool safeMode = false;
 	bool restoreActivePluginsOnStartup = false;
 	bool settingsDirty = false;
 	bool audioDeviceStateDirty = false;
 	int failedAudioRecoveryAttempts = 0;
+	String audioRecoveryState = "running";
+	String audioRecoveryMessage;
 	uint64 chainReloadCount = 0;
 	uint64 bypassToggleCount = 0;
 	uint64 settingsFlushCount = 0;

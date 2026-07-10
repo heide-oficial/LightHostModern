@@ -9,6 +9,7 @@ cmake_install.cmake
 compile_commands.json
 
 # Local dependency checkouts/caches
+.wix/
 lib/
 tools/
 _deps/
