@@ -880,6 +880,20 @@ function ConvertTo-RtfText {
     return $Value.Replace("\", "\\").Replace("{", "\{").Replace("}", "\}").Replace("`r`n", "\par ").Replace("`n", "\par ")
 }
 
+function New-StableGuid {
+    param([Parameter(Mandatory)][string] $Identity)
+
+    $md5 = [System.Security.Cryptography.MD5]::Create()
+    try {
+        $bytes = [System.Text.Encoding]::UTF8.GetBytes($Identity)
+        $hash = $md5.ComputeHash($bytes)
+        return ([Guid]::new($hash)).ToString().ToUpperInvariant()
+    }
+    finally {
+        $md5.Dispose()
+    }
+}
+
 function New-WixMsiPackage {
     param(
         [Parameter(Mandatory)][string] $SourceDir,
@@ -974,13 +988,14 @@ The installed application includes the full LICENSE file. The license is also av
     $manufacturer = "Light Host Modern"
     $escapedIconPath = ConvertTo-WixXmlText $IconPath
     $upgradeCode = "8F28E61C-DC90-4927-B7B4-3E74E4B5960B"
+    $productCode = New-StableGuid "$upgradeCode|$appVersion"
     $mainExeTarget = "[APPLICATIONFOLDER]$exeName"
 
     $wxs = New-Object System.Collections.Generic.List[string]
     $wxs.Add("<?xml version=`"1.0`" encoding=`"UTF-8`"?>")
     $wxs.Add("<Wix xmlns=`"http://wixtoolset.org/schemas/v4/wxs`" xmlns:ui=`"http://wixtoolset.org/schemas/v4/wxs/ui`">")
-    $wxs.Add("  <Package Name=`"$productName`" Manufacturer=`"$manufacturer`" Version=`"$appVersion`" UpgradeCode=`"$upgradeCode`" Scope=`"perUserOrMachine`">")
-    $wxs.Add("    <MajorUpgrade DowngradeErrorMessage=`"A newer version of $productName is already installed.`" />")
+    $wxs.Add("  <Package Name=`"$productName`" Manufacturer=`"$manufacturer`" Version=`"$appVersion`" UpgradeCode=`"$upgradeCode`" ProductCode=`"$productCode`" Scope=`"perUserOrMachine`">")
+    $wxs.Add("    <MajorUpgrade AllowSameVersionUpgrades=`"yes`" DowngradeErrorMessage=`"A newer version of $productName is already installed.`" />")
     $wxs.Add("    <MediaTemplate EmbedCab=`"yes`" />")
     $wxs.Add("    <Icon Id=`"AppIcon.ico`" SourceFile=`"$escapedIconPath`" />")
     $wxs.Add("    <Property Id=`"ARPPRODUCTICON`" Value=`"AppIcon.ico`" />")
