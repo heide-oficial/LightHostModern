@@ -150,6 +150,8 @@ namespace winrt::LightHostWinUI::implementation
         std::vector<std::wstring> knownPluginDisplayNames;
         std::vector<std::string> renderedInputChannelKeys;
         std::vector<std::string> renderedOutputChannelKeys;
+        std::vector<ChannelRowData> currentInputChannelRows;
+        std::vector<ChannelRowData> currentOutputChannelRows;
         std::string currentAudioBackendName;
         std::string currentAudioInputDeviceName;
         std::string currentAudioOutputDeviceName;

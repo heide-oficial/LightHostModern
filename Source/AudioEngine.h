@@ -211,6 +211,11 @@ private:
 	std::unique_ptr<XmlElement> getXmlValueOrClear(const String& key);
 	void saveActivePluginList();
 	void saveActivePluginChain(bool saveProcessorStates);
+	void saveCurrentAudioChannelState();
+	void applySavedAudioChannelState(AudioDeviceManager::AudioDeviceSetup& setup,
+	                                 const String& backendName,
+	                                 const String& inputDeviceName,
+	                                 const String& outputDeviceName);
 	void rememberLastSelectedAudioDevice();
 	void rememberManualSelectedAudioDevice();
 	bool applyPreferredAudioDevice(AudioRecoveryConfiguration const& recoveryConfig, bool manualRetry);

@@ -74,6 +74,37 @@ namespace
 	#endif
 	}
 
+	String audioChannelStateKey(const String& backendName, const String& inputDeviceName, const String& outputDeviceName)
+	{
+		const String identity = backendName.trim() + "|" + inputDeviceName.trim() + "|" + outputDeviceName.trim();
+		return "audioChannelState_" + String::toHexString(identity.hashCode64());
+	}
+
+	BigInteger parseChannelMask(const String& mask)
+	{
+		BigInteger bits;
+		const String trimmed = mask.trim();
+		for (int i = 0; i < trimmed.length(); ++i)
+		{
+			const int bitIndex = trimmed.length() - 1 - i;
+			if (trimmed[i] == '1')
+				bits.setBit(bitIndex, true);
+		}
+
+		return bits;
+	}
+
+	void applyStoredChannelMask(BigInteger& target, const String& mask, int channelCount)
+	{
+		if (mask.isEmpty() || channelCount <= 0)
+			return;
+
+		const auto stored = parseChannelMask(mask);
+		target.clear();
+		for (int i = 0; i < channelCount; ++i)
+			target.setBit(i, stored[i]);
+	}
+
 	void addEnabledPluginFormats(AudioPluginFormatManager& manager)
 	{
 	#if JUCE_PLUGINHOST_VST
@@ -975,6 +1006,7 @@ bool AudioEngine::applyPreferredAudioDevice(AudioRecoveryConfiguration const& re
 	setup.useDefaultOutputChannels = true;
 	setup.inputChannels.clear();
 	setup.outputChannels.clear();
+	applySavedAudioChannelState(setup, targetBackend, setup.inputDeviceName, setup.outputDeviceName);
 
 	const String error = deviceManager.setAudioDeviceSetup(setup, true);
 	AudioIODevice* selectedDevice = deviceManager.getCurrentAudioDevice();
@@ -1158,6 +1190,7 @@ bool AudioEngine::setAudioBackendByIndex(int backendIndex)
 		setup.outputChannels.clear();
 		setup.sampleRate = 0.0;
 		setup.bufferSize = 0;
+		applySavedAudioChannelState(setup, typeName, setup.inputDeviceName, setup.outputDeviceName);
 
 		lightHostLog("AudioEngine setAudioDeviceSetup attempt=" + String(attempt + 1)
 			+ "/" + String((int) candidates.size())
@@ -1311,6 +1344,7 @@ bool AudioEngine::setAudioInputDeviceByIndex(int deviceIndex)
 		setup.outputDeviceName = requestedInputDevice;
 		lightHostLog("AudioEngine setAudioInputDeviceByIndex ASIO mode; input and output will use the same device");
 	}
+	applySavedAudioChannelState(setup, currentType->getTypeName(), setup.inputDeviceName, setup.outputDeviceName);
 
 	lightHostLog("AudioEngine setAudioInputDeviceByIndex applying input='" + setup.inputDeviceName
 		+ "' output='" + setup.outputDeviceName + "'");
@@ -1449,6 +1483,7 @@ bool AudioEngine::setAudioOutputDeviceByIndex(int deviceIndex)
 		setup.inputDeviceName = requestedOutputDevice;
 		lightHostLog("AudioEngine setAudioOutputDeviceByIndex ASIO mode; input and output will use the same device");
 	}
+	applySavedAudioChannelState(setup, currentType->getTypeName(), setup.inputDeviceName, setup.outputDeviceName);
 
 	lightHostLog("AudioEngine setAudioOutputDeviceByIndex applying input='" + setup.inputDeviceName
 		+ "' output='" + setup.outputDeviceName + "'");
@@ -2766,8 +2801,81 @@ void AudioEngine::saveActivePluginChain(bool saveProcessorStates)
 	flushPendingSaves();
 }
 
+void AudioEngine::saveCurrentAudioChannelState()
+{
+	auto* device = deviceManager.getCurrentAudioDevice();
+	if (device == nullptr)
+		return;
+
+	AudioDeviceManager::AudioDeviceSetup setup;
+	deviceManager.getAudioDeviceSetup(setup);
+	const auto inputChannels = setup.inputChannels.isZero() ? device->getActiveInputChannels() : setup.inputChannels;
+	const auto outputChannels = setup.outputChannels.isZero() ? device->getActiveOutputChannels() : setup.outputChannels;
+
+	auto state = std::make_unique<XmlElement>("CHANNELS");
+	state->setAttribute("backend", device->getTypeName());
+	state->setAttribute("input", setup.inputDeviceName);
+	state->setAttribute("output", setup.outputDeviceName);
+	state->setAttribute("inputChannels", inputChannels.toString(2));
+	state->setAttribute("outputChannels", outputChannels.toString(2));
+	state->setAttribute("useDefaultInputChannels", setup.useDefaultInputChannels);
+	state->setAttribute("useDefaultOutputChannels", setup.useDefaultOutputChannels);
+
+	getAppProperties().getUserSettings()->setValue(
+		audioChannelStateKey(device->getTypeName(), setup.inputDeviceName, setup.outputDeviceName),
+		state.get());
+	settingsDirty = true;
+}
+
+void AudioEngine::applySavedAudioChannelState(AudioDeviceManager::AudioDeviceSetup& setup,
+                                             const String& backendName,
+                                             const String& inputDeviceName,
+                                             const String& outputDeviceName)
+{
+	std::unique_ptr<XmlElement> state(getXmlValueOrClear(audioChannelStateKey(backendName, inputDeviceName, outputDeviceName)));
+	if (state == nullptr)
+		return;
+
+	const auto inputMask = state->getStringAttribute("inputChannels");
+	const auto outputMask = state->getStringAttribute("outputChannels");
+	if (inputMask.isNotEmpty())
+	{
+		setup.useDefaultInputChannels = false;
+		auto* currentType = deviceManager.getCurrentDeviceTypeObject();
+		int channelCount = 0;
+		if (currentType != nullptr)
+		{
+			const auto inputNames = currentType->getDeviceNames(true);
+			channelCount = inputNames.contains(inputDeviceName) ? 256 : 0;
+		}
+
+		if (auto* device = deviceManager.getCurrentAudioDevice())
+			channelCount = (std::max)(channelCount, device->getInputChannelNames().size());
+
+		applyStoredChannelMask(setup.inputChannels, inputMask, channelCount > 0 ? channelCount : 256);
+	}
+
+	if (outputMask.isNotEmpty())
+	{
+		setup.useDefaultOutputChannels = false;
+		auto* currentType = deviceManager.getCurrentDeviceTypeObject();
+		int channelCount = 0;
+		if (currentType != nullptr)
+		{
+			const auto outputNames = currentType->getDeviceNames(false);
+			channelCount = outputNames.contains(outputDeviceName) ? 256 : 0;
+		}
+
+		if (auto* device = deviceManager.getCurrentAudioDevice())
+			channelCount = (std::max)(channelCount, device->getOutputChannelNames().size());
+
+		applyStoredChannelMask(setup.outputChannels, outputMask, channelCount > 0 ? channelCount : 256);
+	}
+}
+
 void AudioEngine::saveAudioDeviceState()
 {
+	saveCurrentAudioChannelState();
 	audioDeviceStateDirty = true;
 	startTimer(persistenceTimerId, 1000);
 }

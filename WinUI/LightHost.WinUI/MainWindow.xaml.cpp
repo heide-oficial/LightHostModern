@@ -2363,7 +2363,14 @@ namespace winrt::LightHostWinUI::implementation
         }
         catch (...) {}
 
-        if (sendCommand(std::string("set-all-input-channels:") + (shouldCheck ? "1" : "0")))
+        bool succeeded = !currentInputChannelRows.empty();
+        for (auto const& row : currentInputChannelRows)
+        {
+            for (int channelIndex = row.startIndex; channelIndex <= row.endIndex; ++channelIndex)
+                succeeded = sendCommand("set-input-channel:" + std::to_string(channelIndex) + ":" + (shouldCheck ? "1" : "0")) && succeeded;
+        }
+
+        if (succeeded)
             showNotification(shouldCheck ? L"All input channels enabled." : L"All input channels disabled.");
     }
 
@@ -2376,7 +2383,14 @@ namespace winrt::LightHostWinUI::implementation
         }
         catch (...) {}
 
-        if (sendCommand(std::string("set-all-output-channels:") + (shouldCheck ? "1" : "0")))
+        bool succeeded = !currentOutputChannelRows.empty();
+        for (auto const& row : currentOutputChannelRows)
+        {
+            for (int channelIndex = row.startIndex; channelIndex <= row.endIndex; ++channelIndex)
+                succeeded = sendCommand("set-output-channel:" + std::to_string(channelIndex) + ":" + (shouldCheck ? "1" : "0")) && succeeded;
+        }
+
+        if (succeeded)
             showNotification(shouldCheck ? L"All output channels enabled." : L"All output channels disabled.");
     }
 
@@ -2478,6 +2492,8 @@ namespace winrt::LightHostWinUI::implementation
         renderedInstalledPluginLabels.clear();
         renderedInputChannelKeys.clear();
         renderedOutputChannelKeys.clear();
+        currentInputChannelRows.clear();
+        currentOutputChannelRows.clear();
         createMeterSegments(InputMeterBarHost(), inputMeterSegments);
         createMeterSegments(OutputMeterBarHost(), outputMeterSegments);
         showSection(std::wstring(PageTitleText().Text().c_str()));
@@ -2949,6 +2965,8 @@ namespace winrt::LightHostWinUI::implementation
             knownPluginDisplayNames.clear();
             renderedInputChannelKeys.clear();
             renderedOutputChannelKeys.clear();
+            currentInputChannelRows.clear();
+            currentOutputChannelRows.clear();
             updateRunningPluginActions();
             updateInstalledPluginActions();
             return;
@@ -3075,6 +3093,8 @@ namespace winrt::LightHostWinUI::implementation
 
         const auto groupedOutputChannels = groupedChannelRows(backend, outputChannelNames, activeOutputChannels, false);
         const auto groupedInputChannels = groupedChannelRows(backend, inputChannelNames, activeInputChannels, true);
+        currentOutputChannelRows = groupedOutputChannels;
+        currentInputChannelRows = groupedInputChannels;
         setVisible(ChannelsCard(), !groupedOutputChannels.empty() || !groupedInputChannels.empty());
         setVisible(OutputChannelGroup(), !groupedOutputChannels.empty());
         setVisible(InputChannelGroup(), !groupedInputChannels.empty());
